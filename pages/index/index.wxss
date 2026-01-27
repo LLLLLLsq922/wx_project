@@ -1,0 +1,567 @@
+/* pages/index/index.wxss */
+.container {
+    padding: 20rpx;
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    padding-bottom: 300rpx;
+  }
+  
+  .section {
+    margin-bottom: 20rpx;
+  }
+  
+  .card {
+    background: white;
+    border-radius: 15rpx;
+    padding: 30rpx;
+    box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  }
+  
+  .section-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    margin-bottom: 20rpx;
+    display: block;
+    color: #333;
+  }
+  
+  /* 手牌显示区域 */
+  .cards-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15rpx;
+    min-height: 120rpx;
+    align-items: center;
+    padding: 10rpx;
+  }
+  
+  .card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    transition: all 0.3s;
+  }
+  
+  .card-item:active {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  
+  .card-image {
+    width: 60rpx;
+    height: 80rpx;
+    border: 2rpx solid #ddd;
+    border-radius: 8rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+    background-color: #f8f9fa;
+  }
+  
+  .card-image.small {
+    width: 40rpx;
+    height: 60rpx;
+  }
+  
+  .card-name {
+    font-size: 20rpx;
+    color: #666;
+  }
+  
+  .empty-placeholder {
+    text-align: center;
+    color: #999;
+    font-size: 28rpx;
+    width: 100%;
+    padding: 40rpx 0;
+  }
+  
+  /* 操作牌组样式 */
+  .action-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+  
+  .action-group {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 15rpx;
+    background: #f8f9fa;
+    border-radius: 8rpx;
+    border-left: 4rpx solid #07c160;
+  }
+  
+  .action-type {
+    font-size: 28rpx;
+    color: #07c160;
+    font-weight: bold;
+    min-width: 80rpx;
+  }
+  
+  .group-cards {
+    display: flex;
+    gap: 8rpx;
+    flex-wrap: wrap;
+  }
+  
+  .group-card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* 操作模式按钮 - 优化为紧凑一行显示 */
+  .mode-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8rpx;
+    margin-bottom: 15rpx;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .mode-btn {
+    flex: 1;
+    min-width: 0;
+    font-size: 20rpx;
+    padding: 12rpx 8rpx;
+    background: #f8f9fa;
+    border: 2rpx solid #e9ecef;
+    border-radius: 6rpx;
+    text-align: center;
+    transition: all 0.3s;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .mode-btn.active {
+    background-color: #07c160;
+    color: white;
+    border-color: #07c160;
+    transform: translateY(-2rpx);
+    box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.3);
+  }
+  
+  .mode-hint {
+    font-size: 22rpx;
+    color: #ff6b35;
+    background: #fff2e8;
+    padding: 12rpx 15rpx;
+    border-radius: 6rpx;
+    border-left: 4rpx solid #ff6b35;
+    margin-top: 15rpx;
+    line-height: 1.4;
+  }
+  
+  /* 麻将牌选择区 - 优化为紧凑一行显示9张牌 */
+  .card-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 25rpx;
+  }
+  
+  .card-category {
+    margin-bottom: 8rpx;
+  }
+  
+  .category-title {
+    font-size: 26rpx;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 12rpx;
+    display: block;
+    padding-bottom: 8rpx;
+    border-bottom: 1rpx solid #f0f0f0;
+  }
+  
+  .card-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6rpx;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8rpx 0;
+  }
+  
+  .card-btn-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .card-btn-container:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  .card-btn {
+    width: 52rpx;
+    height: 70rpx;
+    border: 2rpx solid #ddd;
+    border-radius: 6rpx;
+    box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
+    background-color: white;
+  }
+  
+  .card-btn-text {
+    font-size: 16rpx;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60rpx;
+    text-align: center;
+  }
+  
+  /* 特殊规则选择 - 优化为紧凑一行显示 */
+  .special-rules {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12rpx;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8rpx 0;
+  }
+  
+  .rule-item {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+    font-size: 22rpx;
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .rule-text {
+    color: #666;
+    font-size: 22rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  /* 圈风风位选择 */
+  .wind-selection {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20rpx;
+  }
+  
+  .wind-item {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+    flex: 1;
+  }
+  
+  .wind-item text {
+    font-size: 26rpx;
+    color: #666;
+    min-width: 70rpx;
+  }
+  
+  .picker {
+    flex: 1;
+    padding: 15rpx 20rpx;
+    border: 2rpx solid #e9ecef;
+    border-radius: 6rpx;
+    text-align: center;
+    font-size: 26rpx;
+    background: #f8f9fa;
+    color: #333;
+  }
+  
+  /* 功能按钮 */
+  .action-buttons {
+    display: flex;
+    gap: 15rpx;
+    margin: 30rpx 0;
+  }
+  
+  .action-buttons .btn {
+    flex: 1;
+    padding: 20rpx;
+    font-size: 26rpx;
+    border: none;
+    border-radius: 8rpx;
+    font-weight: bold;
+    transition: all 0.3s;
+  }
+  
+  .action-buttons .btn:active {
+    transform: translateY(-2rpx);
+    opacity: 0.9;
+  }
+  
+  .calculate {
+    background: linear-gradient(135deg, #07c160, #05a050);
+    color: white;
+  }
+  
+  .clear {
+    background: linear-gradient(135deg, #ff6b35, #e55a2b);
+    color: white;
+  }
+  
+  .rules {
+    background: linear-gradient(135deg, #1989fa, #1675d1);
+    color: white;
+  }
+  
+  /* 结果显示 */
+  .result-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1rpx solid #e0e0e0;
+    box-shadow: 0 -2rpx 20rpx rgba(0,0,0,0.1);
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25rpx;
+    border-bottom: 1rpx solid #f0f0f0;
+  }
+  
+  .result-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .close-btn {
+    font-size: 36rpx;
+    color: #999;
+    width: 36rpx;
+    height: 36rpx;
+    text-align: center;
+    line-height: 32rpx;
+    border-radius: 50%;
+    background: #f5f5f5;
+  }
+  
+  .close-btn:active {
+    background: #e0e0e0;
+  }
+  
+  .result-content {
+    padding: 25rpx;
+    max-height: 350rpx;
+    overflow-y: auto;
+  }
+  
+  .result-content.success {
+    background: linear-gradient(135deg, #e8f8f0, #d1f0e0);
+    border-left: 8rpx solid #07c160;
+  }
+  
+  .result-content.error {
+    background: linear-gradient(135deg, #ffe8e6, #ffd1cc);
+    border-left: 8rpx solid #ff6b35;
+  }
+  
+  .hu-status {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+    margin-bottom: 25rpx;
+  }
+  
+  .status-icon {
+    font-size: 36rpx;
+  }
+  
+  .status-text {
+    font-size: 28rpx;
+    font-weight: bold;
+  }
+  
+  .result-content.success .status-text {
+    color: #07c160;
+  }
+  
+  .result-content.error .status-text {
+    color: #ff6b35;
+  }
+  
+  .fan-summary {
+    margin-top: 15rpx;
+  }
+  
+  .total-fan {
+    font-size: 28rpx;
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 15rpx;
+    padding: 12rpx 0;
+    border-bottom: 2rpx solid rgba(0,0,0,0.1);
+  }
+  
+  .fan-list {
+    text-align: left;
+    background: rgba(255,255,255,0.7);
+    border-radius: 8rpx;
+    padding: 15rpx;
+  }
+  
+  .fan-item {
+    display: block;
+    font-size: 24rpx;
+    margin-bottom: 10rpx;
+    color: #666;
+    padding: 6rpx 0;
+    border-bottom: 1rpx solid #e9ecef;
+  }
+  
+  .fan-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  .no-hu-tip {
+    text-align: center;
+    font-size: 26rpx;
+    color: #666;
+    padding: 30rpx 0;
+  }
+  
+  /* 响应式设计 - 针对小屏幕进一步优化 */
+  @media (max-width: 750rpx) {
+    .container {
+      padding: 15rpx;
+    }
+    
+    .card {
+      padding: 20rpx;
+    }
+    
+    .section-title {
+      font-size: 28rpx;
+      margin-bottom: 15rpx;
+    }
+    
+    .wind-selection {
+      flex-direction: column;
+      gap: 15rpx;
+    }
+    
+    .wind-item {
+      justify-content: space-between;
+    }
+    
+    .action-buttons {
+      flex-direction: column;
+      gap: 12rpx;
+    }
+    
+    /* 进一步压缩元素尺寸 */
+    .mode-btn {
+      font-size: 18rpx;
+      padding: 10rpx 6rpx;
+      gap: 4rpx;
+    }
+    
+    .card-btn {
+      width: 48rpx;
+      height: 65rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 14rpx;
+      max-width: 50rpx;
+    }
+    
+    .rule-item {
+      font-size: 20rpx;
+      gap: 6rpx;
+    }
+    
+    .rule-text {
+      font-size: 20rpx;
+    }
+    
+    .mode-hint {
+      font-size: 20rpx;
+      padding: 10rpx 12rpx;
+    }
+    
+    .action-buttons .btn {
+      font-size: 24rpx;
+      padding: 18rpx;
+    }
+  }
+  
+  /* 针对超小屏幕的额外优化 */
+  @media (max-width: 600rpx) {
+    .mode-btn {
+      font-size: 16rpx;
+      padding: 8rpx 4rpx;
+    }
+    
+    .card-btn {
+      width: 44rpx;
+      height: 60rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 12rpx;
+    }
+    
+    .rule-item {
+      font-size: 18rpx;
+    }
+    
+    .rule-text {
+      font-size: 18rpx;
+    }
+  }
+  
+  /* 确保在标准屏幕上也能正常显示 */
+  @media (min-width: 751rpx) and (max-width: 1000rpx) {
+    .mode-btn {
+      font-size: 22rpx;
+      padding: 14rpx 10rpx;
+    }
+    
+    .card-btn {
+      width: 56rpx;
+      height: 75rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 18rpx;
+    }
+    
+    .rule-item {
+      font-size: 24rpx;
+    }
+    
+    .rule-text {
+      font-size: 24rpx;
+    }
+  }
+  

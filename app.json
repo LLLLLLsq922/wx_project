@@ -1,0 +1,37 @@
+{
+    "pages": [
+      "pages/index/index",
+      "pages/rules/rules"
+    ],
+    "window": {
+      "backgroundTextStyle": "light",
+      "navigationBarBackgroundColor": "#07c160",
+      "navigationBarTitleText": "国标麻将胡牌计算器",
+      "navigationBarTextStyle": "white",
+      "enablePullDownRefresh": false
+    },
+    "tabBar": {
+      "color": "#666666",
+      "selectedColor": "#07c160",
+      "backgroundColor": "#ffffff",
+      "borderStyle": "black",
+      "list": [
+        {
+          "pagePath": "pages/index/index",
+          "text": "胡牌计算",
+          "iconPath": "images/tabs/calc.png",
+          "selectedIconPath": "images/tabs/calc-active.png"
+        },
+        {
+          "pagePath": "pages/rules/rules",
+          "text": "牌型规则",
+          "iconPath": "images/tabs/rules.png",
+          "selectedIconPath": "images/tabs/rules-active.png"
+        }
+      ]
+    },
+    "style": "v2",
+    "sitemapLocation": "sitemap.json",
+    "lazyCodeLoading": "requiredComponents"
+  }
+  

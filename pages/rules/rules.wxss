@@ -1,0 +1,143 @@
+/* pages/rules/rules.wxss */
+.rules-container {
+    min-height: 100vh;
+    background-color: #f5f5f5;
+  }
+  
+  .search-bar {
+    padding: 30rpx;
+    background: white;
+    border-bottom: 1rpx solid #eee;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .search-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-field {
+    flex: 1;
+    height: 80rpx;
+    padding: 0 80rpx 0 30rpx;
+    background: #f8f8f8;
+    border-radius: 40rpx;
+    font-size: 28rpx;
+    border: 1rpx solid #e0e0e0;
+  }
+  
+  .clear-btn {
+    position: absolute;
+    right: 30rpx;
+    font-size: 40rpx;
+    color: #999;
+    width: 40rpx;
+    height: 40rpx;
+    text-align: center;
+    line-height: 35rpx;
+    background: #ddd;
+    border-radius: 50%;
+  }
+  
+  .clear-btn:active {
+    background: #ccc;
+  }
+  
+  .rules-list {
+    height: calc(100vh - 140rpx);
+    padding: 30rpx;
+  }
+  
+  .rules-count {
+    font-size: 24rpx;
+    color: #666;
+    margin-bottom: 20rpx;
+    text-align: center;
+    background: white;
+    padding: 15rpx;
+    border-radius: 8rpx;
+  }
+  
+  .rule-item {
+    background: white;
+    border-radius: 15rpx;
+    padding: 30rpx;
+    margin-bottom: 20rpx;
+    box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+    transition: all 0.3s;
+  }
+  
+  .rule-item:active {
+    transform: scale(0.98);
+    box-shadow: 0 4rpx 15rpx rgba(0,0,0,0.1);
+  }
+  
+  .rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20rpx;
+  }
+  
+  .rule-name {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+    flex: 1;
+  }
+  
+  .rule-fan {
+    font-size: 28rpx;
+    color: #07c160;
+    font-weight: bold;
+    background: #e8f8f0;
+    padding: 8rpx 20rpx;
+    border-radius: 20rpx;
+    min-width: 100rpx;
+    text-align: center;
+  }
+  
+  .rule-description {
+    font-size: 28rpx;
+    color: #666;
+    line-height: 1.6;
+    text-align: justify;
+  }
+  
+  .no-result {
+    text-align: center;
+    font-size: 28rpx;
+    color: #999;
+    padding: 100rpx 0;
+    background: white;
+    border-radius: 15rpx;
+  }
+  
+  /* 响应式设计 */
+  @media (max-width: 750rpx) {
+    .search-bar {
+      padding: 20rpx;
+    }
+    
+    .rules-list {
+      padding: 20rpx;
+    }
+    
+    .rule-item {
+      padding: 25rpx;
+    }
+    
+    .rule-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15rpx;
+    }
+    
+    .rule-fan {
+      align-self: flex-end;
+    }
+  }
+  

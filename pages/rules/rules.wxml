@@ -1,0 +1,36 @@
+<!--pages/rules/rules.wxml-->
+<view class="rules-container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input">
+      <input 
+        value="{{searchText}}" 
+        placeholder="搜索牌型规则..." 
+        bindinput="onSearchInput"
+        class="search-field"
+      />
+      <text class="clear-btn" wx:if="{{searchText}}" bindtap="clearSearch">×</text>
+    </view>
+  </view>
+
+  <!-- 规则列表 -->
+  <scroll-view class="rules-list" scroll-y>
+    <view class="rules-count" wx:if="{{searchText}}">
+      找到 {{filteredRules.length}} 个相关规则
+    </view>
+    
+    <block wx:for="{{filteredRules}}" wx:key="name">
+      <view class="rule-item">
+        <view class="rule-header">
+          <text class="rule-name">{{item.name}}</text>
+          <text class="rule-fan">{{item.fan}}番</text>
+        </view>
+        <view class="rule-description">{{item.description}}</view>
+      </view>
+    </block>
+    
+    <view class="no-result" wx:if="{{filteredRules.length === 0 && searchText}}">
+      未找到相关规则
+    </view>
+  </scroll-view>
+</view>

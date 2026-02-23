@@ -5,7 +5,7 @@ Page({
      * @property {Array} handCards - 手牌数组
      * @property {Array} actionGroups - 操作组数组（吃碰杠）
      * @property {Array} allCards - 所有可用牌数组
-     * @property {string} currentMode - 当前操作模式（hand/chi/peng/minggang/angang）
+     * @property {string} currentMode - 当前操作模式（胡/吃/碰/明杠/暗杠）
      * @property {Array} tempChiCards - 临时吃牌数组
      * @property {Array} actionModes - 操作模式选项
      * @property {Array} specialRules - 特殊规则选项

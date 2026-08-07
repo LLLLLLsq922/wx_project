@@ -83,9 +83,157 @@ const FAN_RULES = [
     });
   }
   
-  // 检查普通胡牌
+  // 检查普通胡牌（使用递归回溯算法）
   function checkNormalHu(cards) {
-    return cards.length === 14;
+    if (cards.length !== 14) return false;
+
+    // 统计牌数分布
+    var cardCount = {};
+    cards.forEach(function(card) {
+      cardCount[card.name] = (cardCount[card.name] || 0) + 1;
+    });
+
+    // 尝试每种牌作为将牌，然后递归检查剩余是否构成面子
+    var cardNames = Object.keys(cardCount);
+    for (var i = 0; i < cardNames.length; i++) {
+      var name = cardNames[i];
+      if (cardCount[name] >= 2) {
+        cardCount[name] -= 2;
+
+        if (canFormMelds(cardCount, 4)) {
+          cardCount[name] += 2;
+          return true;
+        }
+
+        cardCount[name] += 2;
+      }
+    }
+
+    return false;
+  }
+
+  // 递归回溯检查牌数分布能否构成指定数量的面子
+  function canFormMelds(cardCount, needMelds) {
+    if (needMelds === 0) {
+      for (var key in cardCount) {
+        if (cardCount[key] > 0) return false;
+      }
+      return true;
+    }
+
+    // 找到第一张还有剩余的牌
+    var firstCardName = null;
+    for (var key in cardCount) {
+      if (cardCount[key] > 0) {
+        firstCardName = key;
+        break;
+      }
+    }
+
+    if (firstCardName === null) return false;
+
+    var cardInfo = parseCardName(firstCardName);
+    var isNumber = cardInfo && cardInfo.type !== '字';
+    var value = isNumber ? cardInfo.value : null;
+    var suit = isNumber ? cardInfo.type : null;
+
+    // 尝试作为刻子（3张相同）
+    if (cardCount[firstCardName] >= 3) {
+      cardCount[firstCardName] -= 3;
+      if (canFormMelds(cardCount, needMelds - 1)) {
+        cardCount[firstCardName] += 3;
+        return true;
+      }
+      cardCount[firstCardName] += 3;
+    }
+
+    if (isNumber) {
+      // 作为顺子的第一张 (v, v+1, v+2)
+      if (value + 2 <= 9) {
+        var secondName = (value + 1) + suit;
+        var thirdName = (value + 2) + suit;
+
+        if (cardCount[secondName] > 0 && cardCount[thirdName] > 0) {
+          cardCount[firstCardName]--;
+          cardCount[secondName]--;
+          cardCount[thirdName]--;
+
+          if (canFormMelds(cardCount, needMelds - 1)) {
+            cardCount[firstCardName]++;
+            cardCount[secondName]++;
+            cardCount[thirdName]++;
+            return true;
+          }
+
+          cardCount[firstCardName]++;
+          cardCount[secondName]++;
+          cardCount[thirdName]++;
+        }
+      }
+
+      // 作为顺子的第二张 (v-1, v, v+1)
+      if (value > 1 && value < 9) {
+        var prevName = (value - 1) + suit;
+        var nextName = (value + 1) + suit;
+
+        if (cardCount[prevName] > 0 && cardCount[nextName] > 0) {
+          cardCount[prevName]--;
+          cardCount[firstCardName]--;
+          cardCount[nextName]--;
+
+          if (canFormMelds(cardCount, needMelds - 1)) {
+            cardCount[prevName]++;
+            cardCount[firstCardName]++;
+            cardCount[nextName]++;
+            return true;
+          }
+
+          cardCount[prevName]++;
+          cardCount[firstCardName]++;
+          cardCount[nextName]++;
+        }
+      }
+
+      // 作为顺子的第三张 (v-2, v-1, v)
+      if (value > 2) {
+        var prev2Name = (value - 2) + suit;
+        var prev1Name = (value - 1) + suit;
+
+        if (cardCount[prev2Name] > 0 && cardCount[prev1Name] > 0) {
+          cardCount[prev2Name]--;
+          cardCount[prev1Name]--;
+          cardCount[firstCardName]--;
+
+          if (canFormMelds(cardCount, needMelds - 1)) {
+            cardCount[prev2Name]++;
+            cardCount[prev1Name]++;
+            cardCount[firstCardName]++;
+            return true;
+          }
+
+          cardCount[prev2Name]++;
+          cardCount[prev1Name]++;
+          cardCount[firstCardName]++;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // 解析牌名称，获取牌的类型和值信息
+  function parseCardName(cardName) {
+    var match = cardName.match(/^([1-9])(万|条|筒)$/);
+    if (match) {
+      return { value: parseInt(match[1]), type: match[2] };
+    }
+
+    var honorCards = ['东', '南', '西', '北', '中', '发', '白'];
+    if (honorCards.indexOf(cardName) !== -1) {
+      return { value: cardName, type: '字' };
+    }
+
+    return null;
   }
   
   // 计算番数

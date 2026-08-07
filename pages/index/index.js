@@ -887,75 +887,229 @@ Page({
 
     /**
      * 检查普通胡牌（非七对）
-     * @param {Array} handCards - 手牌数组
-     * @param {Array} actionGroups - 操作组数组
+     * 使用递归回溯算法验证手牌能否分解为：将牌(1对) + 4面子
+     * @param {Array} handCards - 手牌数组（包含全部14张牌，含操作组中的牌）
+     * @param {Array} actionGroups - 操作组数组（每个组提供1个面子）
      * @return {boolean} 是否符合普通胡牌条件
      */
     checkNormalHu: function(handCards, actionGroups) {
-        // 合并手牌和操作组的牌
-        var allCards = handCards.slice();
-        if (actionGroups && Array.isArray(actionGroups)) {
-            actionGroups.forEach(function(group) {
-                allCards = allCards.concat(group.cards || []);
-            });
-        }
-        
-        // 统计每张牌的数量
-        var cardCount = {};
-        allCards.forEach(function(card) {
-            var key = card.id;
-            cardCount[key] = (cardCount[key] || 0) + 1;
-        });
-        
         // 验证所有操作组的有效性
         if (actionGroups && Array.isArray(actionGroups)) {
             for (var i = 0; i < actionGroups.length; i++) {
-                var group = actionGroups[i];
-                if (!this.validateActionGroup(group)) {
+                if (!this.validateActionGroup(actionGroups[i])) {
                     return false;
                 }
             }
         }
-        
-        // 检查是否有将牌（一对相同的牌）
-        var hasJiang = false;
-        for (var cardId in cardCount) {
-            if (cardCount[cardId] >= 2) {
-                hasJiang = true;
+
+        // 计算操作组提供的面子数
+        var meldCount = 0;
+        if (actionGroups && Array.isArray(actionGroups)) {
+            meldCount = actionGroups.length;
+        }
+
+        // 手牌中需要构成：1对将牌 + (4 - meldCount)个面子
+        var needMelds = 4 - meldCount;
+
+        // 统计手牌中的牌数（handCards包含了全部14张）
+        var handCardCount = {};
+        handCards.forEach(function(card) {
+            handCardCount[card.id] = (handCardCount[card.id] || 0) + 1;
+        });
+
+        // 减去操作组消耗的牌
+        // 每个操作组有效消耗3张牌（杠的第4张为墙补牌，不计入结构消耗）
+        if (actionGroups && Array.isArray(actionGroups)) {
+            actionGroups.forEach(function(group) {
+                var consumeCount = Math.min(3, (group.cards || []).length);
+                for (var j = 0; j < consumeCount; j++) {
+                    var cardId = group.cards[j].id;
+                    handCardCount[cardId] = (handCardCount[cardId] || 0) - 1;
+                }
+            });
+        }
+
+        // 计算剩余牌数
+        var remainingCount = 0;
+        for (var key in handCardCount) {
+            remainingCount += handCardCount[key];
+        }
+
+        // 验证剩余牌数是否符合结构要求
+        if (remainingCount !== 2 + needMelds * 3) {
+            return false;
+        }
+
+        // 如果不需要额外面子且只剩2张牌，验证是否为一对
+        if (needMelds === 0 && remainingCount === 2) {
+            for (var key in handCardCount) {
+                if (handCardCount[key] === 2) return true;
+            }
+            return false;
+        }
+
+        // 尝试每种牌作为将牌，然后递归检查剩余是否构成面子
+        var self = this;
+        var cardIds = [];
+        for (var k in handCardCount) {
+            if (handCardCount[k] > 0) cardIds.push(k);
+        }
+
+        for (var i = 0; i < cardIds.length; i++) {
+            var cardId = cardIds[i];
+            if (handCardCount[cardId] >= 2) {
+                // 移除一对作为将牌
+                handCardCount[cardId] -= 2;
+
+                if (self.canFormMelds(handCardCount, needMelds)) {
+                    handCardCount[cardId] += 2;
+                    return true;
+                }
+
+                handCardCount[cardId] += 2;
+            }
+        }
+
+        return false;
+    },
+
+    /**
+     * 使用回溯算法检查牌数分布能否构成指定数量的面子
+     * 策略：找到第一张还有剩余的牌，尝试所有可能构成面子的方式：
+     *   1. 作为刻子（3张相同）
+     *   2. 作为顺子的第一张、第二张或第三张
+     * @param {Object} cardCount - 牌数分布 { cardId: count }
+     * @param {number} needMelds - 需要构成的面子数
+     * @return {boolean} 是否可以构成
+     */
+    canFormMelds: function(cardCount, needMelds) {
+        // 如果不需要面子，检查所有牌是否都被用完
+        if (needMelds === 0) {
+            for (var key in cardCount) {
+                if (cardCount[key] > 0) return false;
+            }
+            return true;
+        }
+
+        // 找到第一张还有剩余的牌（按枚举顺序，保证可复现）
+        var firstCardId = null;
+        for (var key in cardCount) {
+            if (cardCount[key] > 0) {
+                firstCardId = key;
                 break;
             }
         }
-        
-        // 没有将牌则不能胡牌
-        if (!hasJiang) {
-            return false;
+
+        if (firstCardId === null) return false;
+
+        var cardInfo = this.parseCardId(firstCardId);
+        var isNumber = cardInfo && cardInfo.type !== '字';
+        var value = isNumber ? cardInfo.value : null;
+        var suit = isNumber ? cardInfo.type : null;
+
+        // 方式1：作为刻子（3张相同）
+        if (cardCount[firstCardId] >= 3) {
+            cardCount[firstCardId] -= 3;
+
+            if (this.canFormMelds(cardCount, needMelds - 1)) {
+                cardCount[firstCardId] += 3;
+                return true;
+            }
+
+            cardCount[firstCardId] += 3;
         }
-        
-        // 检查全碰/杠情况（全求人）
-        if (actionGroups && actionGroups.length > 0) {
-            var allValidGroups = actionGroups.every(function(group) {
-                return group.type === '碰' || group.type === '明杠' || group.type === '暗杠';
-            });
-            
-            if (allValidGroups) {
-                // 获取手牌的唯一牌ID
-                var handCardIds = handCards.map(function(card) { return card.id; });
-                var uniqueHandCards = [...new Set(handCardIds)];
-                
-                // 如果手牌只有一对且总共14张牌，则是全求人
-                if (uniqueHandCards.length === 1 && handCards.length === 2) {
-                    return true;
+
+        if (isNumber) {
+            // 方式2：作为顺子的第一张 (v, v+1, v+2)
+            if (value + 2 <= 9) {
+                var secondId = (value + 1) + suit;
+                var thirdId = (value + 2) + suit;
+
+                if (cardCount[secondId] > 0 && cardCount[thirdId] > 0) {
+                    cardCount[firstCardId]--;
+                    cardCount[secondId]--;
+                    cardCount[thirdId]--;
+
+                    if (this.canFormMelds(cardCount, needMelds - 1)) {
+                        cardCount[firstCardId]++;
+                        cardCount[secondId]++;
+                        cardCount[thirdId]++;
+                        return true;
+                    }
+
+                    cardCount[firstCardId]++;
+                    cardCount[secondId]++;
+                    cardCount[thirdId]++;
+                }
+            }
+
+            // 方式3：作为顺子的第二张 (v-1, v, v+1)
+            if (value > 1 && value < 9) {
+                var prevId = (value - 1) + suit;
+                var nextId = (value + 1) + suit;
+
+                if (cardCount[prevId] > 0 && cardCount[nextId] > 0) {
+                    cardCount[prevId]--;
+                    cardCount[firstCardId]--;
+                    cardCount[nextId]--;
+
+                    if (this.canFormMelds(cardCount, needMelds - 1)) {
+                        cardCount[prevId]++;
+                        cardCount[firstCardId]++;
+                        cardCount[nextId]++;
+                        return true;
+                    }
+
+                    cardCount[prevId]++;
+                    cardCount[firstCardId]++;
+                    cardCount[nextId]++;
+                }
+            }
+
+            // 方式4：作为顺子的第三张 (v-2, v-1, v)
+            if (value > 2) {
+                var prev2Id = (value - 2) + suit;
+                var prev1Id = (value - 1) + suit;
+
+                if (cardCount[prev2Id] > 0 && cardCount[prev1Id] > 0) {
+                    cardCount[prev2Id]--;
+                    cardCount[prev1Id]--;
+                    cardCount[firstCardId]--;
+
+                    if (this.canFormMelds(cardCount, needMelds - 1)) {
+                        cardCount[prev2Id]++;
+                        cardCount[prev1Id]++;
+                        cardCount[firstCardId]++;
+                        return true;
+                    }
+
+                    cardCount[prev2Id]++;
+                    cardCount[prev1Id]++;
+                    cardCount[firstCardId]++;
                 }
             }
         }
-        
-        // 检查七对（再次检查）
-        if (this.checkQiDui(handCards, actionGroups)) {
-            return true;
+
+        return false;
+    },
+
+    /**
+     * 解析牌ID，获取牌的类型和值信息
+     * @param {string} cardId - 牌ID（如 '1万'、'东'）
+     * @return {Object|null} { type: '万'|'条'|'筒'|'字', value: number|string }
+     */
+    parseCardId: function(cardId) {
+        var match = cardId.match(/^([1-9])(万|条|筒)$/);
+        if (match) {
+            return { value: parseInt(match[1]), type: match[2] };
         }
-        
-        // 默认返回true（简化处理）
-        return true;
+
+        var honorCards = ['东', '南', '西', '北', '中', '发', '白'];
+        if (honorCards.indexOf(cardId) !== -1) {
+            return { value: cardId, type: '字' };
+        }
+
+        return null;
     },
 
     /**

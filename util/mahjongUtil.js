@@ -1,190 +1,1792 @@
-// utils/mahjongUtil.js
-// 修复版：避免使用类静态属性等高级语法
+// util/mahjongUtil.js
+// 国标麻将胡牌判定与番数计算（ES5 兼容）
+//
+// 数据约定：
+//   handCards     = 暗牌数组（不含操作组中的牌）
+//   actionGroups  = [{type:'吃'|'碰'|'明杠'|'暗杠', cards:[{id,name,type,value,image}, ...]}]
+//   胡牌时：handCards.length === 14 - 3 * actionGroups.length
+//
+// options:
+//   { zimo, juezhang, qiangganghu, haidilaoyue, miaoshouhuichun,
+//     gangshangkaihua, tianhu, dihu, renhu,
+//     roundWind (0-3 东南西北), seatWind (0-3),
+//     winTile (胡的那张牌名), huaPai (花牌张数) }
 
-// 国标麻将牌型规则数据
-const FAN_RULES = [
-    { name: '大四喜', fan: 88, check: checkDaSiXi },
-    { name: '大三元', fan: 88, check: checkDaSanYuan },
-    { name: '绿一色', fan: 88, check: checkLvYiSe },
-    { name: '九莲宝灯', fan: 88, check: checkJiuLianBaoDeng },
-    { name: '四杠', fan: 88, check: checkSiGang },
-    { name: '连七对', fan: 88, check: checkLianQiDui },
-    { name: '十三幺', fan: 88, check: checkShiSanYao },
-    { name: '清幺九', fan: 64, check: checkQingYaoJiu },
-    { name: '小四喜', fan: 64, check: checkXiaoSiXi },
-    { name: '小三元', fan: 64, check: checkXiaoSanYuan },
-    { name: '字一色', fan: 64, check: checkZiYiSe },
-    { name: '四暗刻', fan: 64, check: checkSiAnKe },
-    { name: '一色双龙会', fan: 64, check: checkYiSeShuangLongHui },
-    { name: '一色四同顺', fan: 48, check: checkYiSeSiTongShun },
-    { name: '一色四节高', fan: 48, check: checkYiSeSiJieGao },
-    { name: '一色四步高', fan: 32, check: checkYiSeSiBuGao },
-    { name: '三杠', fan: 32, check: checkSanGang },
-    { name: '混幺九', fan: 32, check: checkHunYaoJiu },
-    { name: '七对', fan: 24, check: checkQiDui },
-    { name: '清一色', fan: 24, check: checkQingYiSe },
-    { name: '一色三同顺', fan: 24, check: checkYiSeSanTongShun },
-    { name: '一色三节高', fan: 24, check: checkYiSeSanJieGao },
-    { name: '全大', fan: 24, check: checkQuanDa },
-    { name: '全中', fan: 24, check: checkQuanZhong },
-    { name: '全小', fan: 24, check: checkQuanXiao }
-  ];
-  
-  // 计算胡牌的主函数
-  function calculateHu(handCards, actionGroups, options) {
-    const cards = parseCards(handCards);
-    const canHu = checkHu(cards);
-    
-    if (!canHu) {
-      return { canHu: false, totalFan: 0, fanList: [] };
+var WINDS = ['东', '南', '西', '北'];
+var DRAGONS = ['中', '发', '白'];
+var YAOJIU_NAMES = ['1万', '9万', '1条', '9条', '1筒', '9筒',
+                    '东', '南', '西', '北', '中', '发', '白'];
+var ZI_NAMES = ['东', '南', '西', '北', '中', '发', '白'];
+var GREEN_TILES = ['2条', '3条', '4条', '6条', '8条', '发'];
+
+// ====================================================================
+// 调试日志开关与辅助函数
+// 设为 false 可关闭全部日志（不影响逻辑）
+// ====================================================================
+
+var LOG_ENABLED = true;
+var LOG_PREFIX = '[mahjongUtil]';
+
+function _log() {
+    if (!LOG_ENABLED) return;
+    if (typeof console !== 'undefined' && console.log) {
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(LOG_PREFIX);
+        try { console.log.apply(console, args); } catch (e) { /* 静默 */ }
     }
-  
-    const fanList = calculateFan(cards, actionGroups, options);
-    const totalFan = fanList.reduce(function(sum, item) { 
-      return sum + item.fan; 
-    }, 0);
-  
+}
+
+// 把牌对象数组转为可读字符串：[{name:'1万'}...] -> "1万,2万,3万"
+function _tilesToNames(cards) {
+    if (!cards || !cards.length) return '';
+    var names = [];
+    for (var i = 0; i < cards.length; i++) {
+        names.push(cards[i] && cards[i].name ? cards[i].name : String(cards[i]));
+    }
+    return names.join(',');
+}
+
+// 操作组概要："碰:5条5条5条 | 明杠:9万9万9万9万"
+function _groupsSummary(groups) {
+    if (!groups || !groups.length) return '';
+    var parts = [];
+    for (var i = 0; i < groups.length; i++) {
+        var g = groups[i];
+        parts.push(g.type + ':' + _tilesToNames(g.cards));
+    }
+    return parts.join(' | ');
+}
+
+// allSets 概要（每个 set 一段）："jiang(5条) shunzi(万1) kezi(5条,ming) kezi(9条,angang)"
+function _allSetsSummary(allSets) {
+    if (!allSets || !allSets.length) return '';
+    var parts = [];
+    for (var i = 0; i < allSets.length; i++) {
+        var s = allSets[i];
+        if (s.kind === 'special') {
+            parts.push('special(' + (s.special || '?') + ')');
+            continue;
+        }
+        var tag = s.kind;
+        if (s.isKong) tag += s.concealed ? '(angang)' : '(minggang)';
+        else if (!s.concealed) tag += '(ming)';
+        var v = s.suit === '字' ? s.name : (s.start !== null ? s.suit + s.start : s.name);
+        parts.push(tag + '(' + v + ')');
+    }
+    return parts.join(' ');
+}
+
+// matched 番种概要："清一色:24,缺一门:1"
+function _matchedSummary(matched) {
+    var keys = Object.keys(matched);
+    if (!keys.length) return '(none)';
+    var parts = [];
+    for (var i = 0; i < keys.length; i++) {
+        parts.push(keys[i] + ':' + matched[keys[i]]);
+    }
+    return parts.join(',');
+}
+
+// fanList 概要："清一色:24,缺一门:1"
+function _fanListSummary(fanList) {
+    if (!fanList || !fanList.length) return '(none)';
+    var parts = [];
+    for (var i = 0; i < fanList.length; i++) {
+        parts.push(fanList[i].name + ':' + fanList[i].fan);
+    }
+    return parts.join(',');
+}
+
+// concealedSets 概要
+function _concealedSetsSummary(sets) {
+    if (!sets || !sets.length) return '';
+    var parts = [];
+    for (var i = 0; i < sets.length; i++) {
+        parts.push(sets[i].type + '(' + _tilesToNames(sets[i].tiles) + ')');
+    }
+    return parts.join(' ');
+}
+
+// ====================================================================
+// 主入口
+// ====================================================================
+
+function calculateHu(handCards, actionGroups, options) {
+    options = options || {};
+    actionGroups = actionGroups || [];
+
+    _log('=== calculateHu start ===');
+    _log('input: handLen=' + (handCards && handCards.length) +
+         ', groups=' + actionGroups.length +
+         ', hand=[' + _tilesToNames(handCards) + ']' +
+         ', groups=[' + _groupsSummary(actionGroups) + ']' +
+         ', options=' + JSON.stringify(options));
+
+    var huResult = checkHu(handCards, actionGroups);
+    if (!huResult.canHu) {
+        _log('=== calculateHu end: NOT_HU ===');
+        return { canHu: false, totalFan: 0, fanList: [], pattern: '' };
+    }
+
+    var fanResult = calculateFan(handCards, actionGroups, options, huResult);
+
+    _log('=== calculateHu end: canHu=true, pattern=' + huResult.pattern +
+         ', totalFan=' + fanResult.totalFan + ' ===');
     return {
-      canHu: true,
-      totalFan: totalFan,
-      fanList: fanList
+        canHu: true,
+        totalFan: fanResult.totalFan,
+        fanList: fanResult.fanList,
+        pattern: huResult.pattern
     };
-  }
-  
-  // 解析牌型
-  function parseCards(cards) {
-    return cards.map(function(card) {
-      return {
-        type: card.type,
-        value: card.value,
-        name: card.name
-      };
-    });
-  }
-  
-  // 检查基本胡牌
-  function checkHu(cards) {
-    if (cards.length % 3 !== 2) return false;
-    return checkQiDui(cards) || checkNormalHu(cards);
-  }
-  
-  // 检查七对
-  function checkQiDui(cards) {
-    if (cards.length !== 14) return false;
-    
-    const cardCount = {};
-    cards.forEach(function(card) {
-      const key = card.name;
-      cardCount[key] = (cardCount[key] || 0) + 1;
-    });
-    
-    return Object.keys(cardCount).every(function(key) {
-      return cardCount[key] === 2;
-    });
-  }
-  
-  // 检查普通胡牌
-  function checkNormalHu(cards) {
-    return cards.length === 14;
-  }
-  
-  // 计算番数
-  function calculateFan(cards, actionGroups, options) {
-    const fanList = [];
-    
-    for (let i = 0; i < FAN_RULES.length; i++) {
-      const rule = FAN_RULES[i];
-      if (rule.check(cards, actionGroups, options)) {
-        fanList.push({ name: rule.name, fan: rule.fan });
-      }
+}
+
+// ====================================================================
+// 胡牌判定
+// ====================================================================
+
+function checkHu(handCards, actionGroups) {
+    actionGroups = actionGroups || [];
+    var expected = 14 - 3 * actionGroups.length;
+    var handLen = (handCards && handCards.length) || 0;
+    _log('checkHu enter: handLen=' + handLen + ', expected=' + expected +
+         ', groups=' + actionGroups.length +
+         ', hand=[' + _tilesToNames(handCards) + ']' +
+         ', groups=[' + _groupsSummary(actionGroups) + ']');
+
+    if (!handCards || handCards.length !== expected) {
+        _log('checkHu FAIL: handLen(' + handLen + ') !== expected(' + expected + ')');
+        return { canHu: false };
     }
-  
-    return fanList;
-  }
-  
-  // 各种牌型检查方法
-  function checkDaSiXi(cards, actionGroups) {
-    const honors = ['东', '南', '西', '北'];
-    return honors.every(function(honor) {
-      const allCards = cards.concat(actionGroups.reduce(function(acc, group) {
-        return acc.concat(group.cards);
-      }, []));
-      return allCards.filter(function(c) { 
-        return c.value === honor; 
-      }).length >= 3;
-    });
-  }
-  
-  function checkDaSanYuan(cards, actionGroups) {
-    const yuan = ['中', '发', '白'];
-    return yuan.every(function(y) {
-      const allCards = cards.concat(actionGroups.reduce(function(acc, group) {
-        return acc.concat(group.cards);
-      }, []));
-      return allCards.filter(function(c) { 
-        return c.value === y; 
-      }).length >= 3;
-    });
-  }
-  
-  function checkQiDui(cards) {
+
+    // 校验操作组类型
+    for (var i = 0; i < actionGroups.length; i++) {
+        var t = actionGroups[i].type;
+        if (t !== '吃' && t !== '碰' && t !== '明杠' && t !== '暗杠') {
+            _log('checkHu FAIL: actionGroups[' + i + '].type="' + t + '" 非法');
+            return { canHu: false };
+        }
+    }
+
+    // 仅无操作组时可胡特殊牌型
+    if (actionGroups.length === 0) {
+        if (checkShiSanYao(handCards)) {
+            _log('checkHu OK: 十三幺');
+            return { canHu: true, pattern: '十三幺', special: '十三幺' };
+        }
+        if (checkQiDuiPattern(handCards)) {
+            _log('checkHu OK: 七对');
+            return { canHu: true, pattern: '七对', special: '七对' };
+        }
+        if (checkQuanBuKao(handCards)) {
+            _log('checkHu OK: 全不靠');
+            return { canHu: true, pattern: '全不靠', special: '全不靠' };
+        }
+        var zhl = checkZuHeLongPattern(handCards);
+        if (zhl) {
+            _log('checkHu OK: 组合龙, pair=' + zhl.pair);
+            return { canHu: true, pattern: '组合龙', special: '组合龙', zhlPair: zhl.pair };
+        }
+        _log('checkHu: 特殊牌型均不匹配，尝试标准拆牌');
+    } else {
+        _log('checkHu: 含操作组(' + actionGroups.length + ')，跳过特殊牌型，直接标准拆牌');
+    }
+
+    // 标准胡牌（4 面子 + 1 将）
+    var decomps = getDecompositions(handCards);
+    _log('checkHu: 标准拆牌 decomps.length=' + decomps.length);
+    if (decomps.length > 0) {
+        for (var d = 0; d < decomps.length; d++) {
+            _log('checkHu decomp#' + d + ': pair=' + decomps[d].pair +
+                 ', concealedSets=[' + _concealedSetsSummary(decomps[d].concealedSets) + ']');
+        }
+        _log('checkHu OK: 标准, 共 ' + decomps.length + ' 种拆法');
+        return { canHu: true, pattern: '标准', decompositions: decomps };
+    }
+
+    _log('checkHu FAIL: 无法拆牌');
+    return { canHu: false };
+}
+
+// --- 十三幺 ---
+function checkShiSanYao(cards) {
     if (cards.length !== 14) return false;
-    const count = {};
-    cards.forEach(function(card) {
-      count[card.name] = (count[card.name] || 0) + 1;
+    var count = {};
+    cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    // 必须全部是幺九牌
+    for (var k in count) {
+        if (YAOJIU_NAMES.indexOf(k) === -1) return false;
+    }
+    var distinct = 0, dbl = 0;
+    YAOJIU_NAMES.forEach(function (n) {
+        var c = count[n] || 0;
+        if (c >= 1) distinct++;
+        if (c === 2) dbl++;
     });
-    return Object.keys(count).every(function(key) {
-      return count[key] === 2;
+    return distinct === 13 && dbl === 1;
+}
+
+// --- 七对 ---
+function checkQiDuiPattern(cards) {
+    if (cards.length !== 14) return false;
+    var count = {};
+    cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    if (Object.keys(count).length !== 7) return false;
+    for (var k in count) if (count[k] !== 2) return false;
+    return true;
+}
+
+// --- 全不靠 ---
+// 14 张单张：7 张字牌（各 1）+ 7 张数牌（无任意 3 张同花色连续）
+function checkQuanBuKao(cards) {
+    if (cards.length !== 14) return false;
+    var count = {};
+    cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    for (var i = 0; i < ZI_NAMES.length; i++) {
+        if (count[ZI_NAMES[i]] !== 1) return false;
+    }
+    var numCards = cards.filter(function (c) { return c.type !== '字'; });
+    if (numCards.length !== 7) return false;
+    // 数牌间不能成刻子（即不能重复）
+    for (var k in count) {
+        if (YAOJIU_NAMES.indexOf(k) === -1 || ZI_NAMES.indexOf(k) !== -1) continue;
+        if (count[k] > 1) return false;
+    }
+    // 按花色分组，无 3 连
+    var bySuit = { '万': [], '条': [], '筒': [] };
+    numCards.forEach(function (c) { bySuit[c.type].push(c.value); });
+    for (var s in bySuit) {
+        var v = bySuit[s].slice().sort(function (a, b) { return a - b; });
+        for (var i = 0; i < v.length - 2; i++) {
+            if (v[i + 1] === v[i] + 1 && v[i + 2] === v[i] + 2) return false;
+        }
+    }
+    return true;
+}
+
+// --- 组合龙 ---
+// 14 张牌 = 2 张同种将 + 12 张数牌
+// 其中 9 张组成组合龙（[1,2,3]/[4,5,6]/[7,8,9] 三组跨花色顺子，每组 3 数字分属 3 花色）
+// 另 3 张组成 1 个普通面子（同花色刻子或顺子）
+function checkZuHeLongPattern(cards) {
+    if (cards.length !== 14) return null;
+    var count = {};
+    cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+
+    var pairNames = [];
+    for (var n in count) if (count[n] >= 2) pairNames.push(n);
+
+    for (var pi = 0; pi < pairNames.length; pi++) {
+        var pair = pairNames[pi];
+        var rem = {};
+        for (var k in count) rem[k] = count[k];
+        rem[pair] -= 2;
+
+        // 剩余 12 张必须全部为数牌
+        var remTiles = [];
+        var hasZi = false;
+        for (var name in rem) {
+            if (rem[name] <= 0) continue;
+            var p = parseName(name);
+            if (!p) { hasZi = true; break; }
+            for (var i = 0; i < rem[name]; i++) {
+                remTiles.push({ name: name, suit: p.suit, value: p.value });
+            }
+        }
+        if (hasZi) continue;
+        if (remTiles.length !== 12) continue;
+
+        // 从 12 张中选 3 张作面子，剩 9 张检查组合龙
+        if (tryZuHeLongWithFace(remTiles)) {
+            return { pair: pair };
+        }
+    }
+    return null;
+}
+
+// 遍历 12 张中任选 3 张作面子的组合，剩余 9 张检查组合龙
+function tryZuHeLongWithFace(tiles) {
+    var n = tiles.length;
+    for (var i = 0; i < n - 2; i++) {
+        for (var j = i + 1; j < n - 1; j++) {
+            for (var k = j + 1; k < n; k++) {
+                var face = [tiles[i], tiles[j], tiles[k]];
+                if (!isValidFaceTiles(face)) continue;
+                var rest = [];
+                for (var t = 0; t < n; t++) {
+                    if (t !== i && t !== j && t !== k) rest.push(tiles[t]);
+                }
+                var bySuit = { '万': [], '条': [], '筒': [] };
+                for (var r = 0; r < rest.length; r++) {
+                    bySuit[rest[r].suit].push(rest[r].value);
+                }
+                if (canFormZuHeLong9(bySuit)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 3 张同花色牌能否组成刻子或顺子
+function isValidFaceTiles(tiles) {
+    if (tiles.length !== 3) return false;
+    if (tiles[0].suit !== tiles[1].suit || tiles[1].suit !== tiles[2].suit) return false;
+    var vals = [tiles[0].value, tiles[1].value, tiles[2].value]
+        .sort(function (a, b) { return a - b; });
+    if (vals[0] === vals[1] && vals[1] === vals[2]) return true;          // 刻子
+    if (vals[1] === vals[0] + 1 && vals[2] === vals[1] + 1) return true;  // 顺子
+    return false;
+}
+
+// 9 张数牌（每花色 3 张）能否组成 [1,2,3]/[4,5,6]/[7,8,9] 三组跨花色顺子
+function canFormZuHeLong9(bySuit) {
+    if (bySuit.万.length !== 3 || bySuit.条.length !== 3 || bySuit.筒.length !== 3) return false;
+    var groups = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    var used = { '万': {}, '条': {}, '筒': {} };
+    ['万', '条', '筒'].forEach(function (s) {
+        bySuit[s].forEach(function (v) { used[s][v] = (used[s][v] || 0) + 1; });
     });
-  }
-  
-  function checkQingYiSe(cards, actionGroups) {
-    const allCards = cards.concat(actionGroups.reduce(function(acc, group) {
-      return acc.concat(group.cards);
-    }, []));
-    if (allCards.length === 0) return false;
-    const types = [];
-    allCards.forEach(function(card) {
-      if (types.indexOf(card.type) === -1) {
-        types.push(card.type);
-      }
+    return _zhlTryGroup(0, used, groups);
+}
+
+function _zhlTryGroup(gi, rem, groups) {
+    if (gi === 3) {
+        for (var s in rem) {
+            for (var v in rem[s]) if (rem[s][v] > 0) return false;
+        }
+        return true;
+    }
+    var g = groups[gi];
+    var suits = ['万', '条', '筒'];
+    var perms = permutations(suits);
+    for (var pi = 0; pi < perms.length; pi++) {
+        var perm = perms[pi];
+        var ok = true;
+        for (var i = 0; i < 3; i++) {
+            if ((rem[perm[i]][g[i]] || 0) < 1) { ok = false; break; }
+        }
+        if (ok) {
+            var newRem = {};
+            for (var s in rem) {
+                newRem[s] = {};
+                for (var v in rem[s]) newRem[s][v] = rem[s][v];
+            }
+            for (var j = 0; j < 3; j++) newRem[perm[j]][g[j]]--;
+            if (_zhlTryGroup(gi + 1, newRem, groups)) return true;
+        }
+    }
+    return false;
+}
+
+function permutations(arr) {
+    if (arr.length <= 1) return [arr.slice()];
+    var result = [];
+    for (var i = 0; i < arr.length; i++) {
+        var rest = arr.slice(0, i).concat(arr.slice(i + 1));
+        var subs = permutations(rest);
+        for (var j = 0; j < subs.length; j++) result.push([arr[i]].concat(subs[j]));
+    }
+    return result;
+}
+
+// ====================================================================
+// 标准胡牌拆解（回溯所有拆法）
+// ====================================================================
+
+function parseName(name) {
+    if (typeof name !== 'string' || name.length < 2) return null;
+    var v = parseInt(name.charAt(0), 10);
+    var s = name.charAt(1);
+    if (isNaN(v) || (s !== '万' && s !== '条' && s !== '筒')) return null;
+    return { suit: s, value: v };
+}
+
+function getDecompositions(handCards) {
+    var decomps = [];
+    var count = {};
+    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+
+    var pairCandidates = [];
+    for (var name in count) {
+        if (count[name] >= 2) pairCandidates.push(name);
+    }
+
+    pairCandidates.forEach(function (pairName) {
+        var wc = {};
+        for (var k in count) wc[k] = count[k];
+        wc[pairName] -= 2;
+        if (wc[pairName] === 0) delete wc[pairName];
+        collectDecompositions(wc, [], decomps, pairName);
     });
-    return types.length === 1 && types[0] !== '字';
-  }
-  
-  function checkZiYiSe(cards, actionGroups) {
-    const allCards = cards.concat(actionGroups.reduce(function(acc, group) {
-      return acc.concat(group.cards);
-    }, []));
-    return allCards.every(function(card) {
-      return card.type === '字';
+
+    return decomps;
+}
+
+function collectDecompositions(count, currentSets, results, pairName) {
+    var firstName = null;
+    for (var name in count) {
+        if (count[name] > 0) { firstName = name; break; }
+    }
+    if (firstName === null) {
+        results.push({ pair: pairName, concealedSets: currentSets.slice() });
+        return;
+    }
+
+    var parsed = parseName(firstName);
+
+    // 刻子
+    if (count[firstName] >= 3) {
+        count[firstName] -= 3;
+        if (count[firstName] === 0) delete count[firstName];
+        currentSets.push({ type: 'kezi', tiles: [firstName, firstName, firstName] });
+        collectDecompositions(count, currentSets, results, pairName);
+        currentSets.pop();
+        count[firstName] = (count[firstName] || 0) + 3;
+    }
+
+    // 顺子（仅数牌）
+    if (parsed && parsed.value <= 7) {
+        var n2 = (parsed.value + 1) + parsed.suit;
+        var n3 = (parsed.value + 2) + parsed.suit;
+        if ((count[firstName] || 0) >= 1 && (count[n2] || 0) >= 1 && (count[n3] || 0) >= 1) {
+            count[firstName]--; if (count[firstName] === 0) delete count[firstName];
+            count[n2]--; if (count[n2] === 0) delete count[n2];
+            count[n3]--; if (count[n3] === 0) delete count[n3];
+            currentSets.push({ type: 'shunzi', tiles: [firstName, n2, n3] });
+            collectDecompositions(count, currentSets, results, pairName);
+            currentSets.pop();
+            count[firstName] = (count[firstName] || 0) + 1;
+            count[n2] = (count[n2] || 0) + 1;
+            count[n3] = (count[n3] || 0) + 1;
+        }
+    }
+}
+
+// ====================================================================
+// 拆解分析：合并暗牌+操作组 -> 统一 allSets
+// ====================================================================
+
+function analyzeDecomposition(decomp, actionGroups) {
+    var allSets = [];
+
+    var pairParsed = parseName(decomp.pair);
+    allSets.push({
+        kind: 'jiang',
+        concealed: true,
+        isKong: false,
+        tiles: [decomp.pair, decomp.pair],
+        name: decomp.pair,
+        suit: pairParsed ? pairParsed.suit : '字',
+        start: pairParsed ? pairParsed.value : null
     });
-  }
-  
-  // 其他检查函数（简化实现）
-  function checkLvYiSe() { return false; }
-  function checkJiuLianBaoDeng() { return false; }
-  function checkSiGang() { return false; }
-  function checkLianQiDui() { return false; }
-  function checkShiSanYao() { return false; }
-  function checkQingYaoJiu() { return false; }
-  function checkXiaoSiXi() { return false; }
-  function checkXiaoSanYuan() { return false; }
-  function checkSiAnKe() { return false; }
-  function checkYiSeShuangLongHui() { return false; }
-  function checkYiSeSiTongShun() { return false; }
-  function checkYiSeSiJieGao() { return false; }
-  function checkYiSeSiBuGao() { return false; }
-  function checkSanGang() { return false; }
-  function checkHunYaoJiu() { return false; }
-  function checkYiSeSanTongShun() { return false; }
-  function checkYiSeSanJieGao() { return false; }
-  function checkQuanDa() { return false; }
-  function checkQuanZhong() { return false; }
-  function checkQuanXiao() { return false; }
-  
-  // 导出函数
-  module.exports = {
-    calculateHu: calculateHu
-  };
-  
+
+    decomp.concealedSets.forEach(function (s) {
+        var p = parseName(s.tiles[0]);
+        allSets.push({
+            kind: s.type,              // 'kezi' | 'shunzi'
+            concealed: true,
+            isKong: false,
+            tiles: s.tiles.slice(),
+            name: s.tiles[0],
+            suit: p ? p.suit : '字',
+            start: p ? p.value : null
+        });
+    });
+
+    (actionGroups || []).forEach(function (g) {
+        var first = g.cards[0];
+        var p = parseName(first.name);
+        var suit = p ? p.suit : '字';
+        var tiles = g.cards.map(function (c) { return c.name; });
+
+        if (g.type === '吃') {
+            var vals = g.cards.map(function (c) { return c.value; })
+                              .sort(function (a, b) { return a - b; });
+            allSets.push({
+                kind: 'shunzi', concealed: false, isKong: false,
+                tiles: tiles, name: first.name, suit: suit, start: vals[0]
+            });
+        } else if (g.type === '碰') {
+            allSets.push({
+                kind: 'kezi', concealed: false, isKong: false,
+                tiles: tiles, name: first.name, suit: suit,
+                start: p ? p.value : null
+            });
+        } else if (g.type === '明杠') {
+            allSets.push({
+                kind: 'kezi', concealed: false, isKong: true,
+                tiles: tiles, name: first.name, suit: suit,
+                start: p ? p.value : null
+            });
+        } else if (g.type === '暗杠') {
+            allSets.push({
+                kind: 'kezi', concealed: true, isKong: true,
+                tiles: tiles, name: first.name, suit: suit,
+                start: p ? p.value : null
+            });
+        }
+    });
+
+    return allSets;
+}
+
+// 特殊牌型 allSets 构造
+function analyzeSpecial(special, handCards, actionGroups, huResult) {
+    var allSets = [];
+    var count = {};
+    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+
+    if (special === '十三幺') {
+        var pair = null;
+        for (var n in count) if (count[n] === 2) { pair = n; break; }
+        if (pair) {
+            var pp = parseName(pair);
+            allSets.push({
+                kind: 'jiang', concealed: true, isKong: false,
+                tiles: [pair, pair], name: pair,
+                suit: pp ? pp.suit : '字', start: pp ? pp.value : null
+            });
+        }
+        for (var n2 in count) {
+            if (n2 === pair) continue;
+            var p2 = parseName(n2);
+            allSets.push({
+                kind: 'single', concealed: true, isKong: false,
+                tiles: [n2], name: n2,
+                suit: p2 ? p2.suit : '字', start: p2 ? p2.value : null
+            });
+        }
+        allSets.push({ kind: 'special', special: '十三幺', tiles: [],
+                       concealed: true, isKong: false, name: '', suit: '', start: null });
+        return allSets;
+    }
+
+    if (special === '七对') {
+        for (var n3 in count) {
+            var p3 = parseName(n3);
+            allSets.push({
+                kind: 'pair', concealed: true, isKong: false,
+                tiles: [n3, n3], name: n3,
+                suit: p3 ? p3.suit : '字', start: p3 ? p3.value : null
+            });
+        }
+        allSets.push({ kind: 'special', special: '七对', tiles: [],
+                       concealed: true, isKong: false, name: '', suit: '', start: null });
+        return allSets;
+    }
+
+    if (special === '全不靠') {
+        for (var n4 in count) {
+            var p4 = parseName(n4);
+            allSets.push({
+                kind: 'single', concealed: true, isKong: false,
+                tiles: [n4], name: n4,
+                suit: p4 ? p4.suit : '字', start: p4 ? p4.value : null
+            });
+        }
+        allSets.push({ kind: 'special', special: '全不靠', tiles: [],
+                       concealed: true, isKong: false, name: '', suit: '', start: null });
+        return allSets;
+    }
+
+    if (special === '组合龙') {
+        var zhlPair = huResult.zhlPair;
+        var zp = parseName(zhlPair);
+        allSets.push({
+            kind: 'jiang', concealed: true, isKong: false,
+            tiles: [zhlPair, zhlPair], name: zhlPair,
+            suit: zp ? zp.suit : '字', start: zp ? zp.value : null
+        });
+        // 12 张数牌按花色分组成 3 个跨花色顺子（这里只标 single，fan 检查时由 special 标识判定）
+        for (var n5 in count) {
+            if (n5 === zhlPair) continue;
+            var p5 = parseName(n5);
+            for (var i = 0; i < count[n5]; i++) {
+                allSets.push({
+                    kind: 'single', concealed: true, isKong: false,
+                    tiles: [n5], name: n5,
+                    suit: p5 ? p5.suit : '字', start: p5 ? p5.value : null
+                });
+            }
+        }
+        allSets.push({ kind: 'special', special: '组合龙', tiles: [],
+                       concealed: true, isKong: false, name: '', suit: '', start: null });
+        return allSets;
+    }
+
+    return allSets;
+}
+
+// ====================================================================
+// 工具函数
+// ====================================================================
+
+function getAllTilesFromSets(allSets) {
+    var tiles = [];
+    allSets.forEach(function (s) {
+        s.tiles.forEach(function (t) { tiles.push(t); });
+    });
+    return tiles;
+}
+
+function countTileByName(allSets) {
+    var c = {};
+    allSets.forEach(function (s) {
+        s.tiles.forEach(function (t) { c[t] = (c[t] || 0) + 1; });
+    });
+    return c;
+}
+
+function countSets(allSets) {
+    var cnt = { kezi: 0, shunzi: 0, gang: 0, anke: 0, ankeTotal: 0,
+                mingke: 0, minggang: 0, angang: 0 };
+    allSets.forEach(function (s) {
+        if (s.kind === 'kezi') {
+            cnt.kezi++;
+            if (s.isKong) {
+                cnt.gang++;
+                if (s.concealed) cnt.angang++; else cnt.minggang++;
+            } else {
+                if (s.concealed) cnt.anke++; else cnt.mingke++;
+            }
+            if (s.concealed) cnt.ankeTotal++;
+        } else if (s.kind === 'shunzi') {
+            cnt.shunzi++;
+        }
+    });
+    return cnt;
+}
+
+// ====================================================================
+// 番数计算
+// ====================================================================
+
+var FAN_TABLE = [
+    // 88番
+    { name: '大四喜', fan: 88, check: fanDaSiXi },
+    { name: '大三元', fan: 88, check: fanDaSanYuan },
+    { name: '绿一色', fan: 88, check: fanLvYiSe },
+    { name: '九莲宝灯', fan: 88, check: fanJiuLianBaoDeng },
+    { name: '四杠', fan: 88, check: fanSiGang },
+    { name: '连七对', fan: 88, check: fanLianQiDui },
+    { name: '十三幺', fan: 88, check: fanShiSanYao },
+    // 64番
+    { name: '清幺九', fan: 64, check: fanQingYaoJiu },
+    { name: '小四喜', fan: 64, check: fanXiaoSiXi },
+    { name: '小三元', fan: 64, check: fanXiaoSanYuan },
+    { name: '字一色', fan: 64, check: fanZiYiSe },
+    { name: '四暗刻', fan: 64, check: fanSiAnKe },
+    { name: '一色双龙会', fan: 64, check: fanYiSeShuangLongHui },
+    // 48番
+    { name: '一色四同顺', fan: 48, check: fanYiSeSiTongShun },
+    { name: '一色四节高', fan: 48, check: fanYiSeSiJieGao },
+    // 32番
+    { name: '一色四步高', fan: 32, check: fanYiSeSiBuGao },
+    { name: '三杠', fan: 32, check: fanSanGang },
+    { name: '混幺九', fan: 32, check: fanHunYaoJiu },
+    // 24番
+    { name: '七对', fan: 24, check: fanQiDui },
+    { name: '清一色', fan: 24, check: fanQingYiSe },
+    { name: '一色三同顺', fan: 24, check: fanYiSeSanTongShun },
+    { name: '一色三节高', fan: 24, check: fanYiSeSanJieGao },
+    { name: '全大', fan: 24, check: fanQuanDa },
+    { name: '全中', fan: 24, check: fanQuanZhong },
+    { name: '全小', fan: 24, check: fanQuanXiao },
+    // 16番
+    { name: '清龙', fan: 16, check: fanQingLong },
+    { name: '三色双龙会', fan: 16, check: fanSanSeShuangLongHui },
+    { name: '一色三步高', fan: 16, check: fanYiSeSanBuGao },
+    { name: '全带五', fan: 16, check: fanQuanDaiWu },
+    { name: '三同刻', fan: 16, check: fanSanTongKe },
+    { name: '三暗刻', fan: 16, check: fanSanAnKe },
+    // 12番
+    { name: '全不靠', fan: 12, check: fanQuanBuKao },
+    { name: '组合龙', fan: 12, check: fanZuHeLong },
+    { name: '大于五', fan: 12, check: fanDaYuWu },
+    { name: '小于五', fan: 12, check: fanXiaoYuWu },
+    { name: '三风刻', fan: 12, check: fanSanFengKe },
+    // 8番
+    { name: '花龙', fan: 8, check: fanHuaLong },
+    { name: '推不倒', fan: 8, check: fanTuiBuDao },
+    { name: '三色三同顺', fan: 8, check: fanSanSeSanTongShun },
+    { name: '三色三节高', fan: 8, check: fanSanSeSanJieGao },
+    { name: '无番和', fan: 8, check: fanWuFanHe },
+    { name: '妙手回春', fan: 8, check: fanMiaoShouHuiChun },
+    { name: '海底捞月', fan: 8, check: fanHaiDiLaoYue },
+    { name: '杠上开花', fan: 8, check: fanGangShangKaiHua },
+    { name: '抢杠和', fan: 8, check: fanQiangGangHu },
+    // 6番
+    { name: '碰碰和', fan: 6, check: fanPengPengHu },
+    { name: '混一色', fan: 6, check: fanHunYiSe },
+    { name: '三色三步高', fan: 6, check: fanSanSeSanBuGao },
+    { name: '五门齐', fan: 6, check: fanWuMenQi },
+    { name: '全求人', fan: 6, check: fanQuanQiuRen },
+    { name: '双暗杠', fan: 6, check: fanShuangAnGang },
+    { name: '双箭刻', fan: 6, check: fanShuangJianKe },
+    // 4番
+    { name: '全带幺', fan: 4, check: fanQuanDaiYao },
+    { name: '不求人', fan: 4, check: fanBuQiuRen },
+    { name: '双明杠', fan: 4, check: fanShuangMingGang },
+    { name: '和绝张', fan: 4, check: fanHeJueZhang },
+    // 2番
+    { name: '箭刻', fan: 2, check: fanJianKe },
+    { name: '圈风刻', fan: 2, check: fanQuanFengKe },
+    { name: '门风刻', fan: 2, check: fanMenFengKe },
+    { name: '门前清', fan: 2, check: fanMenQianQing },
+    { name: '平和', fan: 2, check: fanPingHe },
+    { name: '四归一', fan: 2, check: fanSiGuiYi },
+    { name: '双同刻', fan: 2, check: fanShuangTongKe },
+    { name: '双暗刻', fan: 2, check: fanShuangAnKe },
+    { name: '断幺', fan: 2, check: fanDuanYao },
+    // 1番
+    { name: '一般高', fan: 1, check: fanYiBanGao },
+    { name: '喜相逢', fan: 1, check: fanXiXiangFeng },
+    { name: '连六', fan: 1, check: fanLianLiu },
+    { name: '老少副', fan: 1, check: fanLaoShaoFu },
+    { name: '幺九刻', fan: 1, check: fanYaoJiuKe },
+    { name: '明杠', fan: 1, check: fanMingGang },
+    { name: '缺一门', fan: 1, check: fanQueYiMen },
+    { name: '无字', fan: 1, check: fanWuZi },
+    { name: '边张', fan: 1, check: fanBianZhang },
+    { name: '坎张', fan: 1, check: fanKanZhang },
+    { name: '单钓将', fan: 1, check: fanDanDiaoJiang },
+    { name: '自摸', fan: 1, check: fanZiMo },
+    { name: '暗杠', fan: 1, check: fanAnGang },
+    { name: '花牌', fan: 1, check: fanHuaPai }
+];
+
+// EXCLUSIONS: 每个番种"不计"的番种（按官方"不计"规则）
+var EXCLUSIONS = {
+    '大四喜': ['三风刻', '圈风刻', '门风刻', '幺九刻', '碰碰和', '断幺'],
+    '大三元': ['箭刻', '双箭刻', '幺九刻', '碰碰和', '断幺'],
+    '绿一色': ['碰碰和', '混一色', '断幺', '无字', '一般高', '老少副', '连六'],
+    '九莲宝灯': ['清一色', '一般高', '老少副', '连六', '断幺', '无字', '边张', '坎张', '单钓将', '自摸'],
+    '四杠': ['三杠', '碰碰和', '双明杠', '双暗杠', '明杠', '暗杠'],
+    '连七对': ['七对', '清一色', '一般高', '老少副', '连六', '单钓将', '自摸', '门前清'],
+    '十三幺': ['五门齐', '全不靠', '单钓将', '自摸', '门前清', '断幺', '无字', '全带幺'],
+    '清幺九': ['混幺九', '全带幺', '无字', '碰碰和', '断幺', '幺九刻', '老少副', '一般高', '连六'],
+    '小四喜': ['三风刻', '圈风刻', '门风刻', '幺九刻'],
+    '小三元': ['箭刻', '双箭刻', '幺九刻'],
+    '字一色': ['碰碰和', '混幺九', '全带幺', '断幺', '幺九刻', '箭刻', '双箭刻'],
+    '四暗刻': ['三暗刻', '双暗刻', '碰碰和', '门前清', '断幺', '幺九刻'],
+    '一色双龙会': ['七对', '清一色', '一般高', '老少副', '连六', '断幺', '无字'],
+    '一色四同顺': ['一色三同顺', '三同刻', '一般高', '四归一', '缺一门', '无字'],
+    '一色四节高': ['一色三节高', '三同刻', '碰碰和', '断幺'],
+    '一色四步高': ['一色三步高', '一般高', '老少副', '连六', '缺一门', '无字'],
+    '三杠': ['双明杠', '双暗杠', '明杠', '暗杠'],
+    '混幺九': ['全带幺', '碰碰和', '断幺', '幺九刻', '老少副', '一般高', '连六'],
+    '七对': ['单钓将', '自摸', '门前清', '一般高', '老少副', '连六'],
+    '清一色': ['缺一门', '无字'],
+    '一色三同顺': ['一般高', '四归一', '缺一门', '无字'],
+    '一色三节高': ['三同刻', '断幺'],
+    '全大': ['无字', '断幺', '缺一门'],
+    '全中': ['无字', '断幺', '缺一门'],
+    '全小': ['无字', '断幺', '缺一门'],
+    '清龙': ['老少副', '连六', '一般高', '缺一门', '无字'],
+    '三色双龙会': ['老少副', '一般高', '喜相逢', '无字', '缺一门'],
+    '一色三步高': ['一般高', '老少副', '连六', '缺一门', '无字'],
+    '全带五': ['无字', '断幺', '缺一门'],
+    '三同刻': ['双同刻', '缺一门'],
+    '三暗刻': ['双暗刻', '一色三节高', '碰碰和'],
+    '全不靠': ['五门齐', '门前清', '单钓将', '自摸', '断幺'],
+    '组合龙': ['无字'],
+    '大于五': ['无字', '断幺', '缺一门'],
+    '小于五': ['无字', '断幺', '缺一门'],
+    '三风刻': ['圈风刻', '门风刻', '幺九刻'],
+    '推不倒': ['无字', '缺一门', '断幺'],
+    '三色三同顺': ['喜相逢', '缺一门', '无字'],
+    '三色三节高': ['缺一门'],
+    '三色三步高': ['喜相逢', '缺一门'],
+    '碰碰和': ['断幺', '双同刻', '双暗刻'],
+    '混一色': ['缺一门', '无字'],
+    '五门齐': ['无字', '缺一门'],
+    '全求人': ['单钓将', '自摸', '门前清'],
+    '双暗杠': ['暗杠', '双暗刻'],
+    '双箭刻': ['箭刻'],
+    '全带幺': ['断幺', '幺九刻'],
+    '不求人': ['门前清', '自摸'],
+    '双明杠': ['明杠'],
+    '和绝张': ['断幺', '坎张', '单钓将', '边张', '自摸'],
+    '箭刻': [],
+    '圈风刻': [],
+    '门风刻': [],
+    '门前清': [],
+    '平和': ['断幺', '无字'],
+    '四归一': [],
+    '双同刻': [],
+    '双暗刻': [],
+    '断幺': []
+};
+
+function calculateFan(handCards, actionGroups, options, huResult) {
+    var decomps;
+    if (huResult.special) {
+        decomps = [{ pair: null, concealedSets: [], special: huResult.special }];
+    } else {
+        decomps = huResult.decompositions;
+    }
+
+    _log('calculateFan enter: pattern=' + huResult.pattern +
+         ', special=' + (huResult.special || 'none') +
+         ', decomps=' + decomps.length +
+         ', options=' + JSON.stringify(options || {}));
+
+    var best = null;
+
+    for (var i = 0; i < decomps.length; i++) {
+        var allSets = huResult.special
+            ? analyzeSpecial(huResult.special, handCards, actionGroups, huResult)
+            : analyzeDecomposition(decomps[i], actionGroups);
+
+        _log('calculateFan decomp#' + i + ': pair=' + (decomps[i].pair || (huResult.zhlPair || '-')) +
+             ', allSets=[' + _allSetsSummary(allSets) + ']');
+
+        var matched = collectMatchedFans(allSets, handCards, actionGroups, options, huResult);
+        _log('calculateFan decomp#' + i + ' matched(' + Object.keys(matched).length + '): ' +
+             _matchedSummary(matched));
+
+        var fanList = applyExclusions(matched);
+        var total = sumFans(fanList);
+        _log('calculateFan decomp#' + i + ' afterExclusions(' + fanList.length + '): ' +
+             _fanListSummary(fanList) + ' | total=' + total);
+
+        if (!best || total > best.totalFan) {
+            best = { totalFan: total, fanList: fanList };
+            _log('calculateFan decomp#' + i + ' -> new best (total=' + total + ')');
+        }
+    }
+
+    if (!best) {
+        _log('calculateFan return: no valid result');
+        return { totalFan: 0, fanList: [] };
+    }
+    _log('calculateFan return: totalFan=' + best.totalFan +
+         ', fanList=[' + _fanListSummary(best.fanList) + ']');
+    return best;
+}
+
+function collectMatchedFans(allSets, handCards, actionGroups, options, huResult) {
+    var matched = {};
+    var errorList = [];
+    for (var i = 0; i < FAN_TABLE.length; i++) {
+        var rule = FAN_TABLE[i];
+        try {
+            if (rule.check(allSets, handCards, actionGroups, options, huResult)) {
+                matched[rule.name] = rule.fan;
+            }
+        } catch (e) {
+            errorList.push(rule.name + ':' + (e && e.message ? e.message : String(e)));
+        }
+    }
+    if (errorList.length) {
+        _log('collectMatchedFans errors: ' + errorList.join(', '));
+    }
+    return matched;
+}
+
+function applyExclusions(matched) {
+    var sorted = Object.keys(matched).map(function (name) {
+        return { name: name, fan: matched[name] };
+    }).sort(function (a, b) { return b.fan - a.fan; });
+
+    var removed = {};
+    var removedLog = [];
+    for (var i = 0; i < sorted.length; i++) {
+        if (removed[sorted[i].name]) continue;
+        var excl = EXCLUSIONS[sorted[i].name] || [];
+        for (var j = 0; j < excl.length; j++) {
+            if (matched[excl[j]] !== undefined && !removed[excl[j]]) {
+                removed[excl[j]] = true;
+                removedLog.push(excl[j] + ' (by ' + sorted[i].name + ')');
+            }
+        }
+    }
+    if (removedLog.length) {
+        _log('applyExclusions removed: ' + removedLog.join(', '));
+    }
+
+    var result = [];
+    sorted.forEach(function (item) {
+        if (!removed[item.name]) result.push({ name: item.name, fan: item.fan });
+    });
+    return result;
+}
+
+function sumFans(fanList) {
+    var s = 0;
+    fanList.forEach(function (f) { s += f.fan; });
+    return s;
+}
+
+// ====================================================================
+// 番种检查函数
+// ====================================================================
+
+// --- 88番 ---
+
+// 大四喜：4 个风刻
+function fanDaSiXi(allSets) {
+    var seen = {};
+    allSets.forEach(function (s) {
+        if (s.kind === 'kezi' && WINDS.indexOf(s.name) !== -1) seen[s.name] = true;
+    });
+    return Object.keys(seen).length === 4;
+}
+
+// 大三元：3 个箭刻
+function fanDaSanYuan(allSets) {
+    var seen = {};
+    allSets.forEach(function (s) {
+        if (s.kind === 'kezi' && DRAGONS.indexOf(s.name) !== -1) seen[s.name] = true;
+    });
+    return Object.keys(seen).length === 3;
+}
+
+// 绿一色：全由 23468 条 + 发 组成
+function fanLvYiSe(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return GREEN_TILES.indexOf(t) !== -1; });
+}
+
+// 九莲宝灯：同花色 1112345678999 + 任意同花色 1 张
+function fanJiuLianBaoDeng(allSets, handCards, actionGroups) {
+    if (actionGroups && actionGroups.length > 0) return false;
+    if (!handCards || handCards.length !== 14) return false;
+    var types = {};
+    handCards.forEach(function (c) { types[c.type] = true; });
+    var tk = Object.keys(types);
+    if (tk.length !== 1 || tk[0] === '字') return false;
+    var suit = tk[0];
+    var count = {};
+    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    var pattern = { 1: 3, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 3 };
+    for (var v in pattern) {
+        if ((count[v + suit] || 0) < pattern[v]) return false;
+    }
+    var extra = 0, total = 0;
+    for (var n in count) {
+        var p = parseName(n);
+        if (!p || p.suit !== suit) return false;
+        var need = pattern[p.value] || 0;
+        extra += (count[n] - need);
+        total += count[n];
+    }
+    return total === 14 && extra === 1;
+}
+
+// 四杠
+function fanSiGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.gang === 4;
+}
+
+// 连七对：同花色序数相连 7 对
+function fanLianQiDui(allSets, handCards, actionGroups) {
+    if (actionGroups && actionGroups.length > 0) return false;
+    if (!handCards || handCards.length !== 14) return false;
+    var count = {};
+    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    if (Object.keys(count).length !== 7) return false;
+    for (var k in count) if (count[k] !== 2) return false;
+    var types = {};
+    handCards.forEach(function (c) { types[c.type] = true; });
+    var tk = Object.keys(types);
+    if (tk.length !== 1 || tk[0] === '字') return false;
+    var vals = Object.keys(count).map(function (k) {
+        return parseInt(k.charAt(0), 10);
+    }).sort(function (a, b) { return a - b; });
+    for (var i = 1; i < vals.length; i++) {
+        if (vals[i] !== vals[i - 1] + 1) return false;
+    }
+    return true;
+}
+
+// 十三幺
+function fanShiSanYao(allSets, handCards, actionGroups, options, huResult) {
+    return huResult.special === '十三幺';
+}
+
+// --- 64番 ---
+
+// 清幺九：全部由数牌 1、9 组成
+function fanQingYaoJiu(allSets) {
+    var yao = ['1万', '9万', '1条', '9条', '1筒', '9筒'];
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return yao.indexOf(t) !== -1; });
+}
+
+// 小四喜：3 个风刻 + 1 对风将
+function fanXiaoSiXi(allSets) {
+    var windKezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && WINDS.indexOf(s.name) !== -1;
+    });
+    var windJiang = allSets.filter(function (s) {
+        return s.kind === 'jiang' && WINDS.indexOf(s.name) !== -1;
+    });
+    if (windKezi.length !== 3 || windJiang.length !== 1) return false;
+    var seen = {};
+    windKezi.forEach(function (s) { seen[s.name] = true; });
+    windJiang.forEach(function (s) { seen[s.name] = true; });
+    return Object.keys(seen).length === 4;
+}
+
+// 小三元：2 个箭刻 + 1 对箭将
+function fanXiaoSanYuan(allSets) {
+    var dKezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && DRAGONS.indexOf(s.name) !== -1;
+    });
+    var dJiang = allSets.filter(function (s) {
+        return s.kind === 'jiang' && DRAGONS.indexOf(s.name) !== -1;
+    });
+    if (dKezi.length !== 2 || dJiang.length !== 1) return false;
+    var seen = {};
+    dKezi.forEach(function (s) { seen[s.name] = true; });
+    dJiang.forEach(function (s) { seen[s.name] = true; });
+    return Object.keys(seen).length === 3;
+}
+
+// 字一色
+function fanZiYiSe(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return ZI_NAMES.indexOf(t) !== -1; });
+}
+
+// 四暗刻：4 个暗刻（含暗杠）
+function fanSiAnKe(allSets, handCards, actionGroups) {
+    if (actionGroups) {
+        for (var i = 0; i < actionGroups.length; i++) {
+            if (actionGroups[i].type !== '暗杠') return false;
+        }
+    }
+    var cnt = countSets(allSets);
+    return cnt.ankeTotal === 4;
+}
+
+// 一色双龙会：同花色 123 123 789 789 55
+function fanYiSeShuangLongHui(allSets, handCards, actionGroups) {
+    if (actionGroups && actionGroups.length > 0) return false;
+    if (!handCards || handCards.length !== 14) return false;
+    var types = {};
+    handCards.forEach(function (c) { types[c.type] = true; });
+    var tk = Object.keys(types);
+    if (tk.length !== 1 || tk[0] === '字') return false;
+    var suit = tk[0];
+    var count = {};
+    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
+    if (Object.keys(count).length !== 7) return false;
+    var need = ['1', '2', '3', '5', '7', '8', '9'];
+    for (var i = 0; i < need.length; i++) {
+        if (count[need[i] + suit] !== 2) return false;
+    }
+    return true;
+}
+
+// --- 48番 ---
+
+// 一色四同顺：同花色 4 副相同顺子
+function fanYiSeSiTongShun(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var groups = {};
+    shunzi.forEach(function (s) {
+        var key = s.suit + '_' + s.start;
+        groups[key] = (groups[key] || 0) + 1;
+    });
+    for (var k in groups) if (groups[k] >= 4) return true;
+    return false;
+}
+
+// 一色四节高：同花色 4 副依次递增 1 的刻子
+function fanYiSeSiJieGao(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.suit !== '字';
+    });
+    var bySuit = {};
+    kezi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var vals = bySuit[suit].slice().sort(function (a, b) { return a - b; });
+        if (vals.length >= 4) {
+            for (var i = 0; i <= vals.length - 4; i++) {
+                if (vals[i + 1] === vals[i] + 1 && vals[i + 2] === vals[i] + 2 &&
+                    vals[i + 3] === vals[i] + 3) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// --- 32番 ---
+
+// 一色四步高：同花色 4 副递增 1 的顺子
+function fanYiSeSiBuGao(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
+        if (starts.length >= 4) {
+            for (var i = 0; i <= starts.length - 4; i++) {
+                if (starts[i + 1] === starts[i] + 1 &&
+                    starts[i + 2] === starts[i] + 2 &&
+                    starts[i + 3] === starts[i] + 3) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 三杠
+function fanSanGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.gang === 3;
+}
+
+// 混幺九：全由幺九牌（含字牌）组成
+function fanHunYaoJiu(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return YAOJIU_NAMES.indexOf(t) !== -1; });
+}
+
+// --- 24番 ---
+
+function fanQiDui(allSets, handCards, actionGroups, options, huResult) {
+    return huResult.special === '七对';
+}
+
+function fanQingYiSe(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    var suits = {};
+    for (var i = 0; i < tiles.length; i++) {
+        var p = parseName(tiles[i]);
+        if (!p) return false;
+        suits[p.suit] = true;
+    }
+    return Object.keys(suits).length === 1;
+}
+
+function fanYiSeSanTongShun(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var groups = {};
+    shunzi.forEach(function (s) {
+        var key = s.suit + '_' + s.start;
+        groups[key] = (groups[key] || 0) + 1;
+    });
+    for (var k in groups) if (groups[k] >= 3) return true;
+    return false;
+}
+
+function fanYiSeSanJieGao(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.suit !== '字';
+    });
+    var bySuit = {};
+    kezi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var vals = bySuit[suit].slice().sort(function (a, b) { return a - b; });
+        if (vals.length >= 3) {
+            for (var i = 0; i <= vals.length - 3; i++) {
+                if (vals[i + 1] === vals[i] + 1 && vals[i + 2] === vals[i] + 2) return true;
+            }
+        }
+    }
+    return false;
+}
+
+function fanQuanDa(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) {
+        var p = parseName(t);
+        return p && p.value >= 7 && p.value <= 9;
+    });
+}
+
+function fanQuanZhong(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) {
+        var p = parseName(t);
+        return p && p.value >= 4 && p.value <= 6;
+    });
+}
+
+function fanQuanXiao(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) {
+        var p = parseName(t);
+        return p && p.value >= 1 && p.value <= 3;
+    });
+}
+
+// --- 16番 ---
+
+// 清龙：同花色 123 456 789
+function fanQingLong(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var st = bySuit[suit];
+        if (st.indexOf(1) !== -1 && st.indexOf(4) !== -1 && st.indexOf(7) !== -1) return true;
+    }
+    return false;
+}
+
+// 三色双龙会：2 个花色各 123 789 + 第 3 花色 55 将
+function fanSanSeShuangLongHui(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var jiang = allSets.filter(function (s) { return s.kind === 'jiang'; });
+    if (jiang.length !== 1 || jiang[0].suit === '字') return false;
+    var jiangSuit = jiang[0].suit;
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    var suits = Object.keys(bySuit);
+    if (suits.length !== 2) return false;
+    if (suits.indexOf(jiangSuit) !== -1) return false;
+    return bySuit[suits[0]].indexOf(1) !== -1 && bySuit[suits[0]].indexOf(7) !== -1 &&
+           bySuit[suits[1]].indexOf(1) !== -1 && bySuit[suits[1]].indexOf(7) !== -1;
+}
+
+// 一色三步高：同花色 3 副递增 1 的顺子
+function fanYiSeSanBuGao(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
+        if (starts.length >= 3) {
+            for (var i = 0; i <= starts.length - 3; i++) {
+                if (starts[i + 1] === starts[i] + 1 && starts[i + 2] === starts[i] + 2) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 全带五：每副面子都含 5
+function fanQuanDaiWu(allSets) {
+    var nonJiang = allSets.filter(function (s) {
+        return s.kind === 'kezi' || s.kind === 'shunzi';
+    });
+    if (nonJiang.length === 0) return false;
+    return nonJiang.every(function (s) {
+        return s.tiles.indexOf('5万') !== -1 ||
+               s.tiles.indexOf('5条') !== -1 ||
+               s.tiles.indexOf('5筒') !== -1;
+    });
+}
+
+// 三同刻：3 个花色中相同数值的刻子
+function fanSanTongKe(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.suit !== '字';
+    });
+    var byValue = {};
+    kezi.forEach(function (s) {
+        if (!byValue[s.start]) byValue[s.start] = {};
+        byValue[s.start][s.suit] = true;
+    });
+    for (var v in byValue) {
+        if (Object.keys(byValue[v]).length >= 3) return true;
+    }
+    return false;
+}
+
+// 三暗刻
+function fanSanAnKe(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.ankeTotal === 3;
+}
+
+// --- 12番 ---
+
+function fanQuanBuKao(allSets, handCards, actionGroups, options, huResult) {
+    return huResult.special === '全不靠';
+}
+
+function fanZuHeLong(allSets, handCards, actionGroups, options, huResult) {
+    return huResult.special === '组合龙';
+}
+
+// 大于五：全由 6-9 数牌组成
+function fanDaYuWu(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) {
+        var p = parseName(t);
+        return p && p.value >= 6 && p.value <= 9;
+    });
+}
+
+// 小于五：全由 1-4 数牌组成
+function fanXiaoYuWu(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) {
+        var p = parseName(t);
+        return p && p.value >= 1 && p.value <= 4;
+    });
+}
+
+// 三风刻：3 个风刻
+function fanSanFengKe(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && WINDS.indexOf(s.name) !== -1;
+    });
+    return kezi.length >= 3;
+}
+
+// --- 8番 ---
+
+// 花龙：三色三顺 123 456 789 分布在三种花色
+function fanHuaLong(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var byStart = { 1: [], 4: [], 7: [] };
+    shunzi.forEach(function (s) {
+        if (s.start === 1 || s.start === 4 || s.start === 7) byStart[s.start].push(s.suit);
+    });
+    if (byStart[1].length === 0 || byStart[4].length === 0 || byStart[7].length === 0) return false;
+    for (var i = 0; i < byStart[1].length; i++) {
+        for (var j = 0; j < byStart[4].length; j++) {
+            for (var k = 0; k < byStart[7].length; k++) {
+                var s1 = byStart[1][i], s4 = byStart[4][j], s7 = byStart[7][k];
+                if (s1 !== s4 && s1 !== s7 && s4 !== s7) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 推不倒
+function fanTuiBuDao(allSets) {
+    var ok = ['1条', '2条', '3条', '4条', '5条', '6条', '8条', '9条', '白', '发'];
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return ok.indexOf(t) !== -1; });
+}
+
+// 三色三同顺：3 个花色相同起始顺子
+function fanSanSeSanTongShun(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var byStart = {};
+    shunzi.forEach(function (s) {
+        if (!byStart[s.start]) byStart[s.start] = {};
+        byStart[s.start][s.suit] = true;
+    });
+    for (var v in byStart) {
+        if (Object.keys(byStart[v]).length >= 3) return true;
+    }
+    return false;
+}
+
+// 三色三节高：3 花色依次递增 1 的刻子
+function fanSanSeSanJieGao(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.suit !== '字';
+    });
+    if (kezi.length < 3) return false;
+    for (var i = 0; i < kezi.length; i++) {
+        for (var j = 0; j < kezi.length; j++) {
+            for (var k = 0; k < kezi.length; k++) {
+                if (i === j || i === k || j === k) continue;
+                if (kezi[i].suit === kezi[j].suit || kezi[i].suit === kezi[k].suit ||
+                    kezi[j].suit === kezi[k].suit) continue;
+                if (kezi[j].start === kezi[i].start + 1 &&
+                    kezi[k].start === kezi[j].start + 1) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 无番和（需要刻意凑，反向检测，这里返回 false 让其他番优先）
+function fanWuFanHe() { return false; }
+
+function fanMiaoShouHuiChun(allSets, handCards, actionGroups, options) {
+    return !!options.miaoshouhuichun;
+}
+
+function fanHaiDiLaoYue(allSets, handCards, actionGroups, options) {
+    return !!options.haidilaoyue;
+}
+
+function fanGangShangKaiHua(allSets, handCards, actionGroups, options) {
+    return !!options.gangshangkaihua;
+}
+
+function fanQiangGangHu(allSets, handCards, actionGroups, options) {
+    return !!options.qiangganghu;
+}
+
+// --- 6番 ---
+
+// 碰碰和：4 副刻子（含杠）+ 1 对将
+function fanPengPengHu(allSets) {
+    var cnt = countSets(allSets);
+    var jiang = allSets.filter(function (s) { return s.kind === 'jiang'; });
+    return cnt.kezi === 4 && jiang.length === 1;
+}
+
+// 混一色：一种花色数牌 + 字牌
+function fanHunYiSe(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    var numSuits = {}, hasZi = false;
+    tiles.forEach(function (t) {
+        if (ZI_NAMES.indexOf(t) !== -1) hasZi = true;
+        else {
+            var p = parseName(t);
+            if (p) numSuits[p.suit] = true;
+        }
+    });
+    return Object.keys(numSuits).length === 1 && hasZi;
+}
+
+// 三色三步高：3 花色依次递增 1 的顺子
+function fanSanSeSanBuGao(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    if (shunzi.length < 3) return false;
+    for (var i = 0; i < shunzi.length; i++) {
+        for (var j = 0; j < shunzi.length; j++) {
+            for (var k = 0; k < shunzi.length; k++) {
+                if (i === j || i === k || j === k) continue;
+                if (shunzi[i].suit === shunzi[j].suit || shunzi[i].suit === shunzi[k].suit ||
+                    shunzi[j].suit === shunzi[k].suit) continue;
+                if (shunzi[j].start === shunzi[i].start + 1 &&
+                    shunzi[k].start === shunzi[j].start + 1) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// 五门齐：万条筒风箭齐全
+function fanWuMenQi(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    var has = { '万': false, '条': false, '筒': false, '风': false, '箭': false };
+    tiles.forEach(function (t) {
+        var p = parseName(t);
+        if (p) has[p.suit] = true;
+        else if (WINDS.indexOf(t) !== -1) has.风 = true;
+        else if (DRAGONS.indexOf(t) !== -1) has.箭 = true;
+    });
+    return has.万 && has.条 && has.筒 && has.风 && has.箭;
+}
+
+// 全求人：4 副操作组 + 单钓
+function fanQuanQiuRen(allSets, handCards, actionGroups) {
+    if (!actionGroups || actionGroups.length !== 4) return false;
+    if (!handCards || handCards.length !== 2) return false;
+    return handCards[0].name === handCards[1].name;
+}
+
+// 双暗杠
+function fanShuangAnGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.angang === 2;
+}
+
+// 双箭刻
+function fanShuangJianKe(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && DRAGONS.indexOf(s.name) !== -1;
+    });
+    return kezi.length >= 2;
+}
+
+// --- 4番 ---
+
+// 全带幺：每副面子和将都含幺九牌
+function fanQuanDaiYao(allSets) {
+    var nonSpecial = allSets.filter(function (s) {
+        return s.kind === 'kezi' || s.kind === 'shunzi' || s.kind === 'jiang';
+    });
+    if (nonSpecial.length === 0) return false;
+    return nonSpecial.every(function (s) {
+        return s.tiles.some(function (t) { return YAOJIU_NAMES.indexOf(t) !== -1; });
+    });
+}
+
+// 不求人：无吃碰杠 + 自摸
+function fanBuQiuRen(allSets, handCards, actionGroups, options) {
+    if (actionGroups && actionGroups.length > 0) return false;
+    return !!options.zimo;
+}
+
+// 双明杠
+function fanShuangMingGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.minggang === 2;
+}
+
+// 和绝张
+function fanHeJueZhang(allSets, handCards, actionGroups, options) {
+    return !!options.juezhang;
+}
+
+// --- 2番 ---
+
+// 箭刻
+function fanJianKe(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && DRAGONS.indexOf(s.name) !== -1;
+    });
+    return kezi.length >= 1;
+}
+
+// 圈风刻
+function fanQuanFengKe(allSets, handCards, actionGroups, options) {
+    var rw = WINDS[options.roundWind || 0];
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.name === rw;
+    });
+    return kezi.length >= 1;
+}
+
+// 门风刻
+function fanMenFengKe(allSets, handCards, actionGroups, options) {
+    var sw = WINDS[options.seatWind || 0];
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.name === sw;
+    });
+    return kezi.length >= 1;
+}
+
+// 门前清：无吃、碰、明杠
+function fanMenQianQing(allSets, handCards, actionGroups) {
+    if (!actionGroups) return true;
+    for (var i = 0; i < actionGroups.length; i++) {
+        var t = actionGroups[i].type;
+        if (t === '吃' || t === '碰' || t === '明杠') return false;
+    }
+    return true;
+}
+
+// 平和：4 副顺子 + 1 对将，无字无幺九，无吃碰明杠
+function fanPingHe(allSets, handCards, actionGroups) {
+    if (actionGroups) {
+        for (var i = 0; i < actionGroups.length; i++) {
+            var t = actionGroups[i].type;
+            if (t === '吃' || t === '碰' || t === '明杠') return false;
+        }
+    }
+    var cnt = countSets(allSets);
+    if (cnt.shunzi !== 4) return false;
+    var jiang = allSets.filter(function (s) { return s.kind === 'jiang'; });
+    if (jiang.length !== 1) return false;
+    if (YAOJIU_NAMES.indexOf(jiang[0].name) !== -1) return false;
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    for (var i = 0; i < shunzi.length; i++) {
+        if (shunzi[i].start === 1 || shunzi[i].start === 7) return false;
+    }
+    return true;
+}
+
+// 四归一：同种牌 4 张分在面子里（非杠）
+function fanSiGuiYi(allSets) {
+    var cnt = countTileByName(allSets);
+    for (var n in cnt) {
+        if (cnt[n] === 4) {
+            var inKong = allSets.filter(function (s) {
+                return s.isKong && s.tiles.indexOf(n) !== -1;
+            });
+            if (inKong.length === 0) return true;
+        }
+    }
+    return false;
+}
+
+// 双同刻：两种花色相同数值的刻子
+function fanShuangTongKe(allSets) {
+    var kezi = allSets.filter(function (s) {
+        return s.kind === 'kezi' && s.suit !== '字';
+    });
+    var byVal = {};
+    kezi.forEach(function (s) {
+        if (!byVal[s.start]) byVal[s.start] = {};
+        byVal[s.start][s.suit] = true;
+    });
+    for (var v in byVal) {
+        if (Object.keys(byVal[v]).length >= 2) return true;
+    }
+    return false;
+}
+
+// 双暗刻
+function fanShuangAnKe(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.ankeTotal === 2;
+}
+
+// 断幺：无幺九牌和字牌
+function fanDuanYao(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    if (tiles.length === 0) return false;
+    return tiles.every(function (t) { return YAOJIU_NAMES.indexOf(t) === -1; });
+}
+
+// --- 1番 ---
+
+// 一般高：2 副相同顺子
+function fanYiBanGao(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var seen = {};
+    for (var i = 0; i < shunzi.length; i++) {
+        var key = shunzi[i].suit + '_' + shunzi[i].start;
+        if (seen[key]) return true;
+        seen[key] = true;
+    }
+    return false;
+}
+
+// 喜相逢：2 种花色相同顺子
+function fanXiXiangFeng(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var byStart = {};
+    shunzi.forEach(function (s) {
+        if (!byStart[s.start]) byStart[s.start] = {};
+        byStart[s.start][s.suit] = true;
+    });
+    for (var v in byStart) {
+        if (Object.keys(byStart[v]).length >= 2) return true;
+    }
+    return false;
+}
+
+// 连六：同花色 2 副递增 3 的顺子（如 123 456）
+function fanLianLiu(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
+        for (var i = 0; i < starts.length - 1; i++) {
+            if (starts[i + 1] === starts[i] + 3) return true;
+        }
+    }
+    return false;
+}
+
+// 老少副：同花色 123 789
+function fanLaoShaoFu(allSets) {
+    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
+    var bySuit = {};
+    shunzi.forEach(function (s) {
+        if (!bySuit[s.suit]) bySuit[s.suit] = [];
+        bySuit[s.suit].push(s.start);
+    });
+    for (var suit in bySuit) {
+        if (bySuit[suit].indexOf(1) !== -1 && bySuit[suit].indexOf(7) !== -1) return true;
+    }
+    return false;
+}
+
+// 幺九刻：含幺九牌的刻子
+function fanYaoJiuKe(allSets) {
+    var kezi = allSets.filter(function (s) { return s.kind === 'kezi'; });
+    return kezi.some(function (s) { return YAOJIU_NAMES.indexOf(s.name) !== -1; });
+}
+
+// 明杠
+function fanMingGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.minggang >= 1;
+}
+
+// 缺一门：缺一种花色数牌
+function fanQueYiMen(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    var numSuits = { '万': false, '条': false, '筒': false };
+    tiles.forEach(function (t) {
+        var p = parseName(t);
+        if (p) numSuits[p.suit] = true;
+    });
+    var c = 0;
+    for (var s in numSuits) if (numSuits[s]) c++;
+    return c === 2;
+}
+
+// 无字
+function fanWuZi(allSets) {
+    var tiles = getAllTilesFromSets(allSets);
+    return tiles.every(function (t) { return ZI_NAMES.indexOf(t) === -1; });
+}
+
+// 边张：胡顺子的边张（12->3 或 89->7）
+function fanBianZhang(allSets, handCards, actionGroups, options) {
+    if (!options.winTile) return false;
+    var win = options.winTile;
+    var shunzi = allSets.filter(function (s) {
+        return s.kind === 'shunzi' && s.tiles.indexOf(win) !== -1;
+    });
+    return shunzi.some(function (s) { return s.start === 1 || s.start === 7; });
+}
+
+// 坎张：胡顺子的中间张
+function fanKanZhang(allSets, handCards, actionGroups, options) {
+    if (!options.winTile) return false;
+    var win = options.winTile;
+    var p = parseName(win);
+    if (!p) return false;
+    var shunzi = allSets.filter(function (s) {
+        return s.kind === 'shunzi' && s.tiles.indexOf(win) !== -1;
+    });
+    return shunzi.some(function (s) { return s.start === p.value - 1; });
+}
+
+// 单钓将：胡的牌作将
+function fanDanDiaoJiang(allSets, handCards, actionGroups, options) {
+    if (!options.winTile) return false;
+    var win = options.winTile;
+    var jiang = allSets.filter(function (s) {
+        return s.kind === 'jiang' && s.name === win;
+    });
+    if (jiang.length === 0) return false;
+    return jiang[0].tiles.every(function (t) { return t === win; });
+}
+
+// 自摸
+function fanZiMo(allSets, handCards, actionGroups, options) {
+    return !!options.zimo;
+}
+
+// 暗杠
+function fanAnGang(allSets) {
+    var cnt = countSets(allSets);
+    return cnt.angang >= 1;
+}
+
+// 花牌
+function fanHuaPai(allSets, handCards, actionGroups, options) {
+    return (options.huaPai || 0) > 0;
+}
+
+module.exports = {
+    calculateHu: calculateHu,
+    checkHu: checkHu
+};

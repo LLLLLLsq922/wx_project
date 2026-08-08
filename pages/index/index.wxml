@@ -94,13 +94,13 @@
     <view class="section card" wx:if="{{actionGroups.length > 0}}">
     <text class="section-title">已操作牌组</text>
         <view class="action-groups">
-        <block wx:for="{{actionGroups}}" wx:key="index">
+        <block wx:for="{{actionGroups}}" wx:key="index" wx:for-item="group" wx:for-index="gidx">
             <view class="action-group">
-            <text class="action-type">{{item.type}}：</text>
+            <text class="action-type">{{group.type}}：</text>
                 <view class="group-cards">
-                <block wx:for="{{item.cards}}" wx:key="index">
-                    <view class="group-card-item" bindtap="removeActionGroup" data-index="{{index}}">
-                    <image class="card-image small" src="{{item.image}}" mode="aspectFit" />
+                <block wx:for="{{group.cards}}" wx:key="index" wx:for-item="card" wx:for-index="cidx">
+                    <view class="group-card-item" bindtap="removeActionGroup" data-index="{{gidx}}">
+                    <image class="card-image small" src="{{card.image}}" mode="aspectFit" />
                     </view>
                 </block>
                 </view>
@@ -140,6 +140,25 @@
                 </view>
                 </view>
             </view>
+
+    <!-- 胡牌信息 -->
+    <view class="section card">
+    <text class="section-title">胡牌信息</text>
+        <view class="wind-selection">
+            <view class="wind-item">
+            <text>胡的牌：</text>
+            <picker range="{{winTileCandidates}}" value="{{winTileIndex}}" bindchange="changeWinTile">
+                <view class="picker">{{winTileCandidates[winTileIndex]}}</view>
+                </picker>
+                </view>
+            <view class="wind-item">
+            <text>花牌张数：</text>
+            <picker range="{{huaPaiOptions}}" value="{{huaPai}}" bindchange="changeHuaPai">
+                <view class="picker">{{huaPai}}张</view>
+                </picker>
+                </view>
+            </view>
+    </view>
 
     <!-- 功能按钮 -->
     <view class="action-buttons">

@@ -448,9 +448,12 @@ function collectDecompositions(count, currentSets, results, pairName) {
         var n2 = (parsed.value + 1) + parsed.suit;
         var n3 = (parsed.value + 2) + parsed.suit;
         if ((count[firstName] || 0) >= 1 && (count[n2] || 0) >= 1 && (count[n3] || 0) >= 1) {
-            count[firstName]--; if (count[firstName] === 0) delete count[firstName];
-            count[n2]--; if (count[n2] === 0) delete count[n2];
-            count[n3]--; if (count[n3] === 0) delete count[n3];
+            count[firstName]--;
+            if (count[firstName] === 0) delete count[firstName];
+            count[n2]--;
+            if (count[n2] === 0) delete count[n2];
+            count[n3]--;
+            if (count[n3] === 0) delete count[n3];
             currentSets.push({ type: 'shunzi', tiles: [firstName, n2, n3] });
             collectDecompositions(count, currentSets, results, pairName);
             currentSets.pop();

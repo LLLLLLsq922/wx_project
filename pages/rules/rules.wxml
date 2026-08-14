@@ -1,36 +1,81 @@
 <!--pages/rules/rules.wxml-->
 <view class="rules-container">
-  <!-- 搜索栏 -->
-  <view class="search-bar">
-    <view class="search-input">
-      <input 
-        value="{{searchText}}" 
-        placeholder="搜索牌型规则..." 
-        bindinput="onSearchInput"
-        class="search-field"
-      />
-      <text class="clear-btn" wx:if="{{searchText}}" bindtap="clearSearch">×</text>
-    </view>
-  </view>
-
-  <!-- 规则列表 -->
-  <scroll-view class="rules-list" scroll-y>
-    <view class="rules-count" wx:if="{{searchText}}">
-      找到 {{filteredRules.length}} 个相关规则
-    </view>
-    
-    <block wx:for="{{filteredRules}}" wx:key="name">
-      <view class="rule-item">
-        <view class="rule-header">
-          <text class="rule-name">{{item.name}}</text>
-          <text class="rule-fan">{{item.fan}}番</text>
+    <!-- 搜索栏 -->
+    <view class="search-bar">
+        <view class="search-input">
+            <input
+                value="{{searchText}}"
+                placeholder="搜索牌型规则..."
+                bindinput="onSearchInput"
+                class="search-field"
+            />
+            <text class="clear-btn" wx:if="{{searchText}}" bindtap="clearSearch">×</text>
         </view>
-        <view class="rule-description">{{item.description}}</view>
-      </view>
-    </block>
-    
-    <view class="no-result" wx:if="{{filteredRules.length === 0 && searchText}}">
-      未找到相关规则
     </view>
-  </scroll-view>
+
+    <!-- 搜索结果模式 -->
+    <block wx:if="{{searchText}}">
+        <view class="search-info">
+            找到 {{searchResults.length}} 个相关规则
+        </view>
+        <view class="rule-list">
+            <block wx:for="{{searchResults}}" wx:key="name" wx:for-item="rule">
+                <view class="rule-item" bindtap="goToDetail" data-name="{{rule.name}}">
+                    <view class="rule-header">
+                        <text class="rule-name">{{rule.name}}</text>
+                        <text class="rule-fan">{{rule.fan}}番</text>
+                    </view>
+                    <view class="rule-description">{{rule.description}}</view>
+                </view>
+            </block>
+            <view class="no-result" wx:if="{{searchResults.length === 0}}">
+                未找到相关规则
+            </view>
+        </view>
+    </block>
+
+    <!-- 分组浏览模式 -->
+    <block wx:else>
+        <!-- 番数筛选标签 -->
+        <scroll-view class="fan-filter" scroll-x>
+            <block wx:for="{{fanOptions}}" wx:key="fan" wx:for-item="opt">
+                <view
+                    class="fan-tag {{selectedFan === opt.fan ? 'active' : ''}}"
+                    bindtap="onFanSelect"
+                    data-fan="{{opt.fan}}"
+                >
+                    {{opt.label}}
+                </view>
+            </block>
+        </scroll-view>
+
+        <!-- 分组列表 -->
+        <view class="group-list">
+            <block wx:for="{{groups}}" wx:key="fan" wx:for-item="group" wx:for-index="gIndex">
+                <view class="group-section">
+                    <!-- 分组标题 -->
+                    <view class="group-header" bindtap="toggleGroup" data-index="{{gIndex}}">
+                        <view class="group-title-area">
+                            <text class="group-fan">{{group.fan}}番</text>
+                            <text class="group-count">{{group.rules.length}}种</text>
+                        </view>
+                        <text class="group-arrow {{group.expanded ? 'expanded' : ''}}">▼</text>
+                    </view>
+
+                    <!-- 分组内容（展开时显示） -->
+                    <view class="group-body" wx:if="{{group.expanded}}">
+                        <block wx:for="{{group.rules}}" wx:key="name" wx:for-item="rule">
+                            <view class="rule-item" bindtap="goToDetail" data-name="{{rule.name}}">
+                                <view class="rule-header">
+                                    <text class="rule-name">{{rule.name}}</text>
+                                    <text class="rule-fan">{{rule.fan}}番</text>
+                                </view>
+                                <view class="rule-description">{{rule.description}}</view>
+                            </view>
+                        </block>
+                    </view>
+                </view>
+            </block>
+        </view>
+    </block>
 </view>

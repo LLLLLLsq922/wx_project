@@ -1,0 +1,103 @@
+/* pages/rules-detail/rules-detail.wxss */
+.detail-container {
+    min-height: 100vh;
+    background-color: #f5f5f5;
+    padding-bottom: 60rpx;
+}
+
+/* 标题区 */
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 40rpx 30rpx;
+    background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+}
+
+.detail-name {
+    font-size: 44rpx;
+    font-weight: bold;
+    color: #fff;
+}
+
+.detail-fan {
+    font-size: 32rpx;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 10rpx 28rpx;
+    border-radius: 24rpx;
+    font-weight: bold;
+}
+
+/* 内容区块 */
+.detail-section {
+    margin: 20rpx 24rpx;
+    padding: 30rpx;
+    background: #fff;
+    border-radius: 16rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.section-title {
+    font-size: 28rpx;
+    font-weight: bold;
+    color: #07c160;
+    margin-bottom: 16rpx;
+    padding-left: 16rpx;
+    border-left: 6rpx solid #07c160;
+}
+
+.section-content {
+    font-size: 30rpx;
+    color: #333;
+    line-height: 1.7;
+}
+
+/* 示例牌图 */
+.example-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10rpx;
+    padding: 10rpx 0;
+}
+
+.tile-image {
+    width: 70rpx;
+    height: 100rpx;
+    border-radius: 6rpx;
+    border: 1rpx solid #e8e8e8;
+    background: #fff;
+}
+
+.example-note {
+    margin-top: 20rpx;
+    font-size: 26rpx;
+    color: #888;
+    line-height: 1.6;
+    background: #f9f9f9;
+    padding: 16rpx 20rpx;
+    border-radius: 10rpx;
+}
+
+/* 不计规则 */
+.exclusion-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+    padding: 10rpx 0;
+}
+
+.exclusion-tag {
+    font-size: 26rpx;
+    color: #e8783a;
+    background: #fef3eb;
+    padding: 10rpx 24rpx;
+    border-radius: 20rpx;
+    border: 1rpx solid #fde0cc;
+}
+
+.exclusion-hint {
+    margin-top: 16rpx;
+    font-size: 24rpx;
+    color: #aaa;
+}

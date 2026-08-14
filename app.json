@@ -1,7 +1,8 @@
 {
     "pages": [
       "pages/index/index",
-      "pages/rules/rules"
+      "pages/rules/rules",
+      "pages/rules-detail/rules-detail"
     ],
     "window": {
       "backgroundTextStyle": "light",

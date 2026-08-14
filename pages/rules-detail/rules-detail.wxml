@@ -1,0 +1,42 @@
+<!--pages/rules-detail/rules-detail.wxml-->
+<view class="detail-container" wx:if="{{rule}}">
+    <!-- 标题区 -->
+    <view class="detail-header">
+        <text class="detail-name">{{rule.name}}</text>
+        <text class="detail-fan">{{rule.fan}}番</text>
+    </view>
+
+    <!-- 官方描述 -->
+    <view class="detail-section">
+        <view class="section-title">官方描述</view>
+        <view class="section-content">{{rule.description}}</view>
+    </view>
+
+    <!-- 构成说明 -->
+    <view class="detail-section">
+        <view class="section-title">构成说明</view>
+        <view class="section-content">{{rule.composition}}</view>
+    </view>
+
+    <!-- 示例牌图 -->
+    <view class="detail-section">
+        <view class="section-title">示例牌型</view>
+        <view class="example-tiles">
+            <block wx:for="{{exampleTiles}}" wx:key="name" wx:for-item="tile">
+                <image class="tile-image" src="{{tile.image}}" mode="aspectFit" />
+            </block>
+        </view>
+        <view class="example-note">{{rule.exampleNote}}</view>
+    </view>
+
+    <!-- 不计规则 -->
+    <view class="detail-section" wx:if="{{rule.exclusions.length > 0}}">
+        <view class="section-title">不计规则</view>
+        <view class="exclusion-list">
+            <block wx:for="{{rule.exclusions}}" wx:key="*this" wx:for-item="excl">
+                <text class="exclusion-tag">{{excl}}</text>
+            </block>
+        </view>
+        <view class="exclusion-hint">以上番种在计算本牌型时不重复计分</view>
+    </view>
+</view>

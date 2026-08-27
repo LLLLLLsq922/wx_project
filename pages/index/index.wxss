@@ -221,33 +221,36 @@
     text-align: center;
   }
   
-  /* 特殊规则选择 - 优化为紧凑一行显示 */
+  /* 特殊规则选择 - 2行3列网格布局,完整显示每个选项 */
   .special-rules {
     display: flex;
-    flex-wrap: nowrap;
-    gap: 12rpx;
-    justify-content: space-between;
-    width: 100%;
+    flex-wrap: wrap;
+    gap: 16rpx;
     padding: 8rpx 0;
   }
   
   .rule-item {
     display: flex;
     align-items: center;
-    gap: 8rpx;
-    font-size: 22rpx;
-    flex-shrink: 0;
-    white-space: nowrap;
-    min-width: 0;
-    flex: 1;
     justify-content: center;
+    gap: 8rpx;
+    flex: 0 0 calc((100% - 32rpx) / 3);
+    padding: 18rpx 0;
+    background: #f8f8f8;
+    border-radius: 10rpx;
+    box-sizing: border-box;
+    font-size: 26rpx;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  
+  .rule-item:active {
+    background: #e8e8e8;
   }
   
   .rule-text {
-    color: #666;
-    font-size: 22rpx;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: #333;
+    font-size: 26rpx;
     white-space: nowrap;
   }
   
@@ -281,6 +284,200 @@
     font-size: 26rpx;
     background: #f8f9fa;
     color: #333;
+  }
+
+  /* 胡牌信息区域 */
+  .hu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+
+  .hu-info-row {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+  }
+
+  .hu-label {
+    font-size: 26rpx;
+    color: #666;
+    min-width: 130rpx;
+    flex-shrink: 0;
+  }
+
+  /* 胡的牌实时显示 */
+  .win-display {
+    flex: 1;
+    min-height: 80rpx;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+
+  /* 已满状态：胡牌图 + 结果并排 */
+  .win-display.winning {
+    align-items: flex-start;
+  }
+
+  .waiting-text {
+    font-size: 26rpx;
+    color: #999;
+  }
+
+  /* 听牌列表 */
+  .tingpai-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+
+  .tingpai-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  .tingpai-tile {
+    width: 60rpx;
+    height: 86rpx;
+    border-radius: 6rpx;
+    border: 1rpx solid #e8e8e8;
+    background: #fff;
+  }
+
+  .tingpai-fan {
+    font-size: 22rpx;
+    color: #e8783a;
+    font-weight: bold;
+  }
+
+  .no-tingpai text {
+    font-size: 26rpx;
+    color: #999;
+  }
+
+  /* 已满时胡的牌 */
+  .winning-tile-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    flex-shrink: 0;
+  }
+
+  .winning-tile {
+    width: 80rpx;
+    height: 112rpx;
+    border-radius: 8rpx;
+    border: 3rpx solid #07c160;
+    background: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.25);
+  }
+
+  .winning-label {
+    font-size: 22rpx;
+    color: #07c160;
+    font-weight: bold;
+  }
+
+  /* 胡牌结果内联展示 */
+  .hu-result {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  .hu-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  .hu-result-header.success .hu-status-text {
+    color: #07c160;
+    font-weight: bold;
+    font-size: 28rpx;
+  }
+
+  .hu-result-header.error .hu-status-text {
+    color: #e84c3d;
+    font-weight: bold;
+    font-size: 28rpx;
+  }
+
+  .hu-status-icon {
+    font-size: 30rpx;
+  }
+
+  .hu-status-text {
+    font-size: 28rpx;
+  }
+
+  /* 总番数大字号展示 */
+  .hu-total-fan {
+    display: flex;
+    align-items: baseline;
+    gap: 4rpx;
+  }
+
+  .hu-total-fan-num {
+    font-size: 52rpx;
+    font-weight: bold;
+    color: #e8783a;
+    line-height: 1;
+  }
+
+  .hu-total-fan-unit {
+    font-size: 26rpx;
+    color: #e8783a;
+    font-weight: bold;
+  }
+
+  /* 番型标签列表 */
+  .hu-fan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10rpx;
+  }
+
+  .hu-fan-tag {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+    padding: 6rpx 14rpx;
+    background: linear-gradient(135deg, #fff4e6, #ffe8cc);
+    border: 1rpx solid #ffd8a8;
+    border-radius: 20rpx;
+  }
+
+  .hu-fan-name {
+    font-size: 22rpx;
+    color: #d9480f;
+    font-weight: 500;
+  }
+
+  .hu-fan-count {
+    font-size: 20rpx;
+    color: #fff;
+    background: #e8783a;
+    padding: 2rpx 8rpx;
+    border-radius: 10rpx;
+    font-weight: bold;
+  }
+
+  /* 不可胡牌提示 */
+  .hu-no-tip {
+    padding: 8rpx 0;
+  }
+
+  .hu-no-tip text {
+    font-size: 24rpx;
+    color: #999;
   }
   
   /* 功能按钮 */
@@ -496,12 +693,13 @@
     }
     
     .rule-item {
-      font-size: 20rpx;
+      font-size: 24rpx;
       gap: 6rpx;
+      padding: 16rpx 0;
     }
     
     .rule-text {
-      font-size: 20rpx;
+      font-size: 24rpx;
     }
     
     .mode-hint {
@@ -532,11 +730,12 @@
     }
     
     .rule-item {
-      font-size: 18rpx;
+      font-size: 22rpx;
+      padding: 14rpx 0;
     }
     
     .rule-text {
-      font-size: 18rpx;
+      font-size: 22rpx;
     }
   }
   

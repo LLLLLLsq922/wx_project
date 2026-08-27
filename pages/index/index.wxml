@@ -1,4 +1,14 @@
 <!--pages/index/index.wxml-->
+<wxs module="tiles">
+function totalTiles(handCards, actionGroups) {
+    var count = handCards.length;
+    for (var i = 0; i < actionGroups.length; i++) {
+        count += actionGroups[i].cards.length;
+    }
+    return count;
+}
+module.exports.totalTiles = totalTiles;
+</wxs>
 <view class="container">
     <!-- 麻将牌选择区 -->
     <view class="section card">
@@ -63,7 +73,7 @@
 
     <!-- 手牌显示区域 -->
     <view class="section card">
-    <text class="section-title">当前手牌（{{handCards.length}}/14张）</text>
+    <text class="section-title">当前手牌（{{tiles.totalTiles(handCards, actionGroups)}}/14张）</text>
         <view class="cards-display">
         <block wx:for="{{handCards}}" wx:key="index">
             <view class="card-item" bindtap="removeCard" data-index="{{index}}">
@@ -144,54 +154,77 @@
     <!-- 胡牌信息 -->
     <view class="section card">
     <text class="section-title">胡牌信息</text>
-        <view class="wind-selection">
-            <view class="wind-item">
-            <text>胡的牌：</text>
-            <picker range="{{winTileCandidates}}" value="{{winTileIndex}}" bindchange="changeWinTile">
-                <view class="picker">{{winTileCandidates[winTileIndex]}}</view>
-                </picker>
+        <view class="hu-info">
+            <view class="hu-info-row">
+                <text class="hu-label">胡的牌：</text>
+                <!-- 牌数不足：提示还需几张 -->
+                <view class="win-display waiting" wx:if="{{winTileState === 'waiting'}}">
+                    <text class="waiting-text">还需选择 {{remainingTiles}} 张牌</text>
                 </view>
-            <view class="wind-item">
-            <text>花牌张数：</text>
-            <picker range="{{huaPaiOptions}}" value="{{huaPai}}" bindchange="changeHuaPai">
-                <view class="picker">{{huaPai}}张</view>
-                </picker>
+                <!-- 听牌状态：显示所有可胡牌及其番数 -->
+                <view class="win-display tingpai" wx:elif="{{winTileState === 'tingpai'}}">
+                    <block wx:if="{{tingpaiList.length > 0}}">
+                        <view class="tingpai-list">
+                            <block wx:for="{{tingpaiList}}" wx:key="name" wx:for-item="tp">
+                                <view class="tingpai-item">
+                                    <image class="tingpai-tile" src="{{tp.image}}" mode="aspectFit" />
+                                    <text class="tingpai-fan">{{tp.totalFan}}番</text>
+                                </view>
+                            </block>
+                        </view>
+                    </block>
+                    <view class="no-tingpai" wx:else>
+                        <text>暂无听牌</text>
+                    </view>
                 </view>
+                <!-- 已满：显示胡的牌（图片）+ 胡牌结果 -->
+                <view class="win-display winning" wx:elif="{{winTileState === 'winning'}}">
+                    <view class="winning-tile-wrap">
+                        <image wx:if="{{winTile}}" class="winning-tile" src="{{winTile.image}}" mode="aspectFit" />
+                        <text wx:else class="waiting-text">未选择胡的牌</text>
+                        <text class="winning-label" wx:if="{{winTile}}">胡的牌</text>
+                    </view>
+
+                    <!-- 胡牌结果内联展示 -->
+                    <view class="hu-result">
+                        <!-- 可胡牌 -->
+                        <block wx:if="{{result.canHu}}">
+                            <view class="hu-result-header success">
+                                <text class="hu-status-icon">🎉</text>
+                                <text class="hu-status-text">可胡牌</text>
+                            </view>
+                            <view class="hu-total-fan">
+                                <text class="hu-total-fan-num">{{result.totalFan}}</text>
+                                <text class="hu-total-fan-unit">番</text>
+                            </view>
+                            <view class="hu-fan-list">
+                                <block wx:for="{{result.fanList}}" wx:key="name" wx:for-item="fan">
+                                    <view class="hu-fan-tag">
+                                        <text class="hu-fan-name">{{fan.name}}</text>
+                                        <text class="hu-fan-count">{{fan.fan}}番</text>
+                                    </view>
+                                </block>
+                            </view>
+                        </block>
+                        <!-- 不可胡牌 -->
+                        <block wx:else>
+                            <view class="hu-result-header error">
+                                <text class="hu-status-icon">❌</text>
+                                <text class="hu-status-text">不可胡牌</text>
+                            </view>
+                            <view class="hu-no-tip">
+                                <text>当前牌型不符合胡牌规则，请调整手牌</text>
+                            </view>
+                        </block>
+                    </view>
+                </view>
+            </view>
             </view>
     </view>
 
     <!-- 功能按钮 -->
     <view class="action-buttons">
-    <button class="btn calculate" bindtap="calculate">计算胡牌</button>
     <button class="btn clear" bindtap="clearAll">清空重来</button>
     <button class="btn rules" bindtap="goToRules">查看牌型规则</button>
-    </view>
-
-    <!-- 结果显示 -->
-    <view class="result-container" wx:if="{{showResult}}">
-        <view class="result-header">
-        <text class="result-title">计算结果</text>
-        <text class="close-btn" bindtap="closeResult">×</text>
-        </view>
-    
-        <view class="result-content {{result.canHu ? 'success' : 'error'}}">
-            <view class="hu-status">
-            <text class="status-icon">{{result.canHu ? '🎉' : '❌'}}</text>
-            <text class="status-text">{{result.canHu ? '可胡牌' : '不可胡牌'}}</text>
-            </view>
-      
-            <view class="fan-summary" wx:if="{{result.canHu}}">
-            <text class="total-fan">总番数：{{result.totalFan}}番</text>
-                <view class="fan-list">
-                <block wx:for="{{result.fanList}}" wx:key="name">
-                <text class="fan-item">{{item.name}}：{{item.fan}}番</text>
-                </block>
-                </view>
-            </view>
-      
-            <view class="no-hu-tip" wx:if="{{!result.canHu}}">
-            <text>当前牌型不符合胡牌规则，请调整手牌后重新计算</text>
-            </view>
-        </view>
     </view>
 </view>

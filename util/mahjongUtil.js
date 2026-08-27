@@ -10,7 +10,7 @@
 //   { zimo, juezhang, qiangganghu, haidilaoyue, miaoshouhuichun,
 //     gangshangkaihua, tianhu, dihu, renhu,
 //     roundWind (0-3 东南西北), seatWind (0-3),
-//     winTile (胡的那张牌名), huaPai (花牌张数) }
+//     winTile (胡的那张牌名) }
 
 var WINDS = ['东', '南', '西', '北'];
 var DRAGONS = ['中', '发', '白'];
@@ -753,8 +753,7 @@ var FAN_TABLE = [
     { name: '坎张', fan: 1, check: fanKanZhang },
     { name: '单钓将', fan: 1, check: fanDanDiaoJiang },
     { name: '自摸', fan: 1, check: fanZiMo },
-    { name: '暗杠', fan: 1, check: fanAnGang },
-    { name: '花牌', fan: 1, check: fanHuaPai }
+    { name: '暗杠', fan: 1, check: fanAnGang }
 ];
 
 // EXCLUSIONS: 每个番种"不计"的番种（按官方"不计"规则）
@@ -1782,11 +1781,6 @@ function fanZiMo(allSets, handCards, actionGroups, options) {
 function fanAnGang(allSets) {
     var cnt = countSets(allSets);
     return cnt.angang >= 1;
-}
-
-// 花牌
-function fanHuaPai(allSets, handCards, actionGroups, options) {
-    return (options.huaPai || 0) > 0;
 }
 
 module.exports = {

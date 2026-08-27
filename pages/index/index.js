@@ -41,12 +41,12 @@ Page({
         windOptions: ['东', '南', '西', '北'],
         roundWind: 0,
         seatWind: 0,
-        winTileCandidates: ['未选择'],
-        winTileIndex: 0,
-        huaPai: 0,
-        huaPaiOptions: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        winTile: null,            // 胡的牌（最后一张加入暗牌的牌）
+        winTileState: 'waiting',  // waiting(牌数不足) / tingpai(听牌) / winning(已满14张)
+        tingpaiList: [],          // 听牌列表：[{name, image, totalFan}]
+        remainingTiles: 0,        // 距离听牌还需几张牌（waiting 状态下显示）
         showResult: false,
-        result: {}
+        result: { canHu: false, totalFan: 0, fanList: [], pattern: '' }
     },
 
     onLoad: function () {
@@ -97,7 +97,7 @@ Page({
             actionGroups: [],
             tempChiCards: []
         });
-        this.updateWinTileCandidates();
+        this.updateWinTileDisplay();
     },
 
     /**
@@ -126,10 +126,15 @@ Page({
     },
 
     /**
-     * 当前手牌总数（暗牌 + 操作组牌 ×3）
+     * 当前手牌总数（暗牌 + 各操作组实际牌数，碰/吃=3，杠=4）
      */
     totalTileCount: function () {
-        return this.data.handCards.length + 3 * this.data.actionGroups.length;
+        var count = this.data.handCards.length;
+        var actionGroups = this.data.actionGroups;
+        for (var i = 0; i < actionGroups.length; i++) {
+            count += actionGroups[i].cards.length;
+        }
+        return count;
     },
 
     selectCard: function (e) {
@@ -150,8 +155,15 @@ Page({
 
     addToHand: function (card) {
         var handCards = this.data.handCards;
-        // 暗牌数量上限 = 14 - 3*操作组数
-        var maxHand = 14 - 3 * this.data.actionGroups.length;
+        var actionGroups = this.data.actionGroups;
+        // 暗牌数量上限 = (14 + 杠数) - 各操作组实际牌数
+        var groupTiles = 0;
+        var gangCount = 0;
+        for (var i = 0; i < actionGroups.length; i++) {
+            groupTiles += actionGroups[i].cards.length;
+            if (actionGroups[i].type === '明杠' || actionGroups[i].type === '暗杠') gangCount++;
+        }
+        var maxHand = 14 + gangCount - groupTiles;
         if (handCards.length >= maxHand) {
             wx.showToast({
                 title: '暗牌不能超过' + maxHand + '张',
@@ -169,7 +181,7 @@ Page({
         }
         var newHandCards = handCards.concat([card]);
         this.setData({ handCards: newHandCards, showResult: false });
-        this.updateWinTileCandidates();
+        this.updateWinTileDisplay();
     },
 
     addToChi: function (card) {
@@ -212,9 +224,9 @@ Page({
             return;
         }
 
-        // 检查总数：暗牌 + 3*操作组数 + 3 不超过 14
-        if (this.totalTileCount() + 3 > 14) {
-            wx.showToast({ title: '总牌数不能超过14张', icon: 'none', duration: 2000 });
+        // 检查总数：吃牌不增加杠数，上限 = 14 + 当前杠数
+        if (this.totalTileCount() + 3 > 14 + this.getGangCount()) {
+            wx.showToast({ title: '总牌数不能超过' + (14 + this.getGangCount()) + '张', icon: 'none', duration: 2000 });
             this.rollbackChi();
             return;
         }
@@ -230,7 +242,7 @@ Page({
             tempChiCards: [],
             showResult: false
         });
-        this.updateWinTileCandidates();
+        this.updateWinTileDisplay();
         wx.showToast({ title: '吃牌成功', icon: 'success', duration: 1000 });
     },
 
@@ -279,9 +291,11 @@ Page({
             return;
         }
 
-        // 检查总数
-        if (this.totalTileCount() + cardCount > 14) {
-            wx.showToast({ title: '总牌数不能超过14张', icon: 'none', duration: 2000 });
+        // 检查总数：杠会多1张补牌，上限 = 14 + (当前杠数 + 是否本次杠)
+        var isGang = (mode === 'minggang' || mode === 'angang');
+        var maxTotal = 14 + this.getGangCount() + (isGang ? 1 : 0);
+        if (this.totalTileCount() + cardCount > maxTotal) {
+            wx.showToast({ title: '总牌数不能超过' + maxTotal + '张', icon: 'none', duration: 2000 });
             return;
         }
 
@@ -298,7 +312,7 @@ Page({
             actionGroups: newActionGroups,
             showResult: false
         });
-        this.updateWinTileCandidates();
+        this.updateWinTileDisplay();
         wx.showToast({ title: actionType + '成功', icon: 'success', duration: 1000 });
     },
 
@@ -313,7 +327,7 @@ Page({
                 var newHandCards = handCards.slice();
                 newHandCards.splice(index, 1);
                 this.setData({ handCards: newHandCards, showResult: false });
-                this.updateWinTileCandidates();
+                this.updateWinTileDisplay();
             }
         } catch (error) { /* 静默 */ }
     },
@@ -329,7 +343,7 @@ Page({
                 var newActionGroups = actionGroups.slice();
                 newActionGroups.splice(index, 1);
                 this.setData({ actionGroups: newActionGroups, showResult: false });
-                this.updateWinTileCandidates();
+                this.updateWinTileDisplay();
             }
         } catch (error) { /* 静默 */ }
     },
@@ -353,112 +367,131 @@ Page({
                 : rule;
         });
         this.setData({ specialRules: newRules, showResult: false });
+        this.updateWinTileDisplay();
     },
 
     changeRoundWind: function (e) {
         this.setData({ roundWind: parseInt(e.detail.value), showResult: false });
+        this.updateWinTileDisplay();
     },
 
     changeSeatWind: function (e) {
         this.setData({ seatWind: parseInt(e.detail.value), showResult: false });
+        this.updateWinTileDisplay();
     },
 
     /**
-     * 刷新"胡的牌"候选列表（暗牌 + 操作组牌的唯一名称）
-     * 在手牌变化时调用，保持候选列表与手牌同步
+     * 统计操作组中杠的数量（明杠 + 暗杠），每杠多1张补牌
      */
-    updateWinTileCandidates: function () {
+    getGangCount: function () {
+        var actionGroups = this.data.actionGroups;
+        var count = 0;
+        for (var i = 0; i < actionGroups.length; i++) {
+            if (actionGroups[i].type === '明杠' || actionGroups[i].type === '暗杠') count++;
+        }
+        return count;
+    },
+
+    /**
+     * 刷新"胡的牌"实时显示区域
+     * 状态机：
+     *   waiting  - 牌数不足，提示还需几张
+     *   tingpai  - 差1张胡，枚举所有可胡牌及其番数
+     *   winning  - 已满14+杠数张，显示最后一张加入的暗牌作为胡的牌
+     */
+    updateWinTileDisplay: function () {
         var handCards = this.data.handCards;
         var actionGroups = this.data.actionGroups;
-        var names = {};
-        handCards.forEach(function (c) { names[c.name] = true; });
-        if (actionGroups && Array.isArray(actionGroups)) {
-            actionGroups.forEach(function (g) {
-                if (g.cards && Array.isArray(g.cards)) {
-                    g.cards.forEach(function (c) { names[c.name] = true; });
-                }
+        var gangCount = this.getGangCount();
+        var totalTiles = this.totalTileCount();
+        var winningTotal = 14 + gangCount;
+        var tingpaiTotal = 13 + gangCount;
+
+        // 牌数不足
+        if (totalTiles < tingpaiTotal) {
+            this.setData({
+                winTileState: 'waiting',
+                winTile: null,
+                tingpaiList: [],
+                remainingTiles: tingpaiTotal - totalTiles,
+                result: { canHu: false, totalFan: 0, fanList: [], pattern: '' }
             });
+            return;
         }
-        var candidates = ['未选择'];
-        var prevWinTile = this.data.winTileIndex > 0
-            ? this.data.winTileCandidates[this.data.winTileIndex]
-            : null;
-        var newWinTileIndex = 0;
-        var sortedNames = Object.keys(names).sort();
-        for (var i = 0; i < sortedNames.length; i++) {
-            candidates.push(sortedNames[i]);
-            if (sortedNames[i] === prevWinTile) newWinTileIndex = i + 1;
-        }
-        this.setData({
-            winTileCandidates: candidates,
-            winTileIndex: newWinTileIndex
-        });
-    },
 
-    changeWinTile: function (e) {
-        this.setData({ winTileIndex: parseInt(e.detail.value), showResult: false });
-    },
-
-    changeHuaPai: function (e) {
-        this.setData({ huaPai: parseInt(e.detail.value), showResult: false });
-    },
-
-    /**
-     * 计算胡牌番数：构造 options 调用 mahjongUtil.calculateHu
-     */
-    calculate: function () {
-        try {
-            var handCards = this.data.handCards;
-            var actionGroups = this.data.actionGroups;
-            var specialRules = this.data.specialRules;
-
-            if (this.totalTileCount() === 0) {
-                wx.showToast({ title: '请先选择麻将牌', icon: 'none', duration: 2000 });
-                return;
+        // 已满：胡的牌 = 最后一张加入暗牌的牌，并自动计算胡牌结果
+        if (totalTiles >= winningTotal) {
+            var winTile = null;
+            if (handCards.length > 0) {
+                winTile = handCards[handCards.length - 1];
             }
 
-            // 校验胡牌时暗牌数量 = 14 - 3*操作组数
-            var expectedHand = 14 - 3 * actionGroups.length;
-            if (handCards.length !== expectedHand) {
-                wx.showToast({
-                    title: '暗牌数应为' + expectedHand + '张，当前' + handCards.length + '张',
-                    icon: 'none', duration: 2000
+            // 自动计算胡牌结果
+            var huResult = { canHu: false, totalFan: 0, fanList: [], pattern: '' };
+            try {
+                var options = {
+                    roundWind: this.data.roundWind,
+                    seatWind: this.data.seatWind,
+                    winTile: winTile ? winTile.name : null
+                };
+                this.data.specialRules.forEach(function (rule) {
+                    if (rule.checked) options[rule.value] = true;
                 });
-                return;
+                var calcResult = mahjongUtil.calculateHu(handCards, actionGroups, options);
+                huResult = {
+                    canHu: calcResult.canHu,
+                    totalFan: calcResult.totalFan,
+                    fanList: calcResult.fanList,
+                    pattern: calcResult.pattern || ''
+                };
+            } catch (e) {
+                // 计算异常时静默降级为不可胡
             }
 
-            // 构造 options
-            var winTileName = this.data.winTileIndex > 0
-                ? this.data.winTileCandidates[this.data.winTileIndex]
-                : null;
+            this.setData({
+                winTileState: 'winning',
+                winTile: winTile,
+                tingpaiList: [],
+                result: huResult
+            });
+            return;
+        }
+
+        // 听牌状态：枚举所有可能的牌，计算哪些能胡及其番数
+        var allCards = this.data.allCards;
+        var tingpaiList = [];
+
+        for (var i = 0; i < allCards.length; i++) {
+            var candidate = allCards[i];
+            // 该牌全局已有4张则跳过
+            if (this.countCardInAll(candidate.id) >= 4) continue;
+
+            var testHand = handCards.concat([candidate]);
             var options = {
                 roundWind: this.data.roundWind,
                 seatWind: this.data.seatWind,
-                winTile: winTileName,
-                huaPai: this.data.huaPai || 0
+                winTile: candidate.name
             };
-            specialRules.forEach(function (rule) {
+            this.data.specialRules.forEach(function (rule) {
                 if (rule.checked) options[rule.value] = true;
             });
 
-            var result = mahjongUtil.calculateHu(handCards, actionGroups, options);
-
-            this.setData({
-                showResult: true,
-                result: {
-                    canHu: result.canHu,
-                    totalFan: result.totalFan,
-                    fanList: result.fanList,
-                    pattern: result.pattern || ''
-                }
-            });
-        } catch (error) {
-            wx.showToast({ title: '计算出错，请重试', icon: 'none' });
+            var result = mahjongUtil.calculateHu(testHand, actionGroups, options);
+            if (result.canHu) {
+                tingpaiList.push({
+                    name: candidate.name,
+                    image: candidate.image,
+                    totalFan: result.totalFan
+                });
+            }
         }
-    },
 
-    closeResult: function () {
-        this.setData({ showResult: false });
+        this.setData({
+            winTileState: 'tingpai',
+            winTile: null,
+            tingpaiList: tingpaiList,
+            result: { canHu: false, totalFan: 0, fanList: [], pattern: '' }
+        });
     },
 
     clearAll: function () {
@@ -467,16 +500,18 @@ Page({
             actionGroups: [],
             tempChiCards: [],
             showResult: false,
-            result: {},
+            result: { canHu: false, totalFan: 0, fanList: [], pattern: '' },
+            winTile: null,
+            winTileState: 'waiting',
+            tingpaiList: [],
             specialRules: this.data.specialRules.map(function (rule) {
                 return { name: rule.name, value: rule.value, checked: false };
             }),
             roundWind: 0,
             seatWind: 0,
-            huaPai: 0,
             currentMode: 'hand'
         });
-        this.updateWinTileCandidates();
+        this.updateWinTileDisplay();
         wx.showToast({ title: '已清空', icon: 'success' });
     },
 

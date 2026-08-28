@@ -1,35 +1,61 @@
 {
-  "setting": {
-    "es6": true,
-    "postcss": true,
-    "minified": true,
-    "uglifyFileName": false,
-    "enhance": true,
-    "packNpmRelationList": [],
-    "babelSetting": {
-      "ignore": [],
-      "disablePlugins": [],
-      "outputPath": ""
+    "setting": {
+        "es6": true,
+        "postcss": true,
+        "minified": true,
+        "uglifyFileName": true,
+        "enhance": true,
+        "packNpmRelationList": [],
+        "babelSetting": {
+            "ignore": [],
+            "disablePlugins": [],
+            "outputPath": ""
+        },
+        "useCompilerPlugins": false,
+        "minifyWXML": true,
+        "compileWorklet": false,
+        "uploadWithSourceMap": true,
+        "packNpmManually": false,
+        "minifyWXSS": true,
+        "localPlugins": false,
+        "disableUseStrict": false,
+        "condition": true,
+        "swc": false,
+        "disableSWC": true
     },
-    "useCompilerPlugins": false,
-    "minifyWXML": true,
-    "compileWorklet": false,
-    "uploadWithSourceMap": true,
-    "packNpmManually": false,
-    "minifyWXSS": true,
-    "localPlugins": false,
-    "disableUseStrict": false,
-    "condition": false,
-    "swc": false,
-    "disableSWC": true
-  },
-  "compileType": "miniprogram",
-  "simulatorPluginLibVersion": {},
-  "packOptions": {
-    "ignore": [],
-    "include": []
-  },
-  "appid": "wx8043272552cdc669",
-  "editorSetting": {},
-  "libVersion": "3.11.3"
+    "compileType": "miniprogram",
+    "simulatorPluginLibVersion": {},
+    "packOptions": {
+        "ignore": [
+            {
+                "type": "folder",
+                "value": "test"
+            },
+            {
+                "type": "folder",
+                "value": ".github"
+            },
+            {
+                "type": "file",
+                "value": "package.json"
+            },
+            {
+                "type": "file",
+                "value": ".eslintrc.js"
+            },
+            {
+                "type": "file",
+                "value": "audio/ATTRIBUTION.md"
+            }
+        ],
+        "include": [
+            {
+                "type": "folder",
+                "value": "images/cards"
+            }
+        ]
+    },
+    "appid": "wx8043272552cdc669",
+    "editorSetting": {},
+    "libVersion": "3.11.3"
 }

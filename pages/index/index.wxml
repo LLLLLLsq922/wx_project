@@ -7,7 +7,21 @@ function totalTiles(handCards, actionGroups) {
     }
     return count;
 }
+function gangCount(actionGroups) {
+    var count = 0;
+    for (var i = 0; i < actionGroups.length; i++) {
+        if (actionGroups[i].type === '明杠' || actionGroups[i].type === '暗杠') {
+            count++;
+        }
+    }
+    return count;
+}
+function targetTiles(actionGroups) {
+    return 14 + gangCount(actionGroups);
+}
 module.exports.totalTiles = totalTiles;
+module.exports.gangCount = gangCount;
+module.exports.targetTiles = targetTiles;
 </wxs>
 <view class="container">
     <!-- 麻将牌选择区 -->
@@ -17,7 +31,7 @@ module.exports.totalTiles = totalTiles;
             <view class="card-category">
                 <view class="card-buttons">
                 <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '万'}}">
-                    <view class="card-btn-container" bindtap="selectCard" data-card="{{item}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
                     <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
                     </view>
                 </block>
@@ -25,7 +39,7 @@ module.exports.totalTiles = totalTiles;
         
                 <view class="card-buttons">
                 <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '条'}}">
-                    <view class="card-btn-container" bindtap="selectCard" data-card="{{item}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
                     <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
                     </view>
                 </block>
@@ -33,7 +47,7 @@ module.exports.totalTiles = totalTiles;
 
                 <view class="card-buttons">
                 <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '筒'}}">
-                    <view class="card-btn-container" bindtap="selectCard" data-card="{{item}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
                     <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
                     </view>
                 </block>
@@ -41,7 +55,7 @@ module.exports.totalTiles = totalTiles;
 
                 <view class="card-buttons">
                 <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '字'}}">
-                    <view class="card-btn-container" bindtap="selectCard" data-card="{{item}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
                     <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
                     </view>
                 </block>
@@ -73,7 +87,12 @@ module.exports.totalTiles = totalTiles;
 
     <!-- 手牌显示区域 -->
     <view class="section card">
-    <text class="section-title">当前手牌（{{tiles.totalTiles(handCards, actionGroups)}}/14张）</text>
+    <view class="hand-section-heading">
+        <text class="section-title">当前手牌（{{tiles.totalTiles(handCards, actionGroups)}}/{{tiles.targetTiles(actionGroups)}}张）</text>
+        <text class="gang-count-hint" wx:if="{{tiles.gangCount(actionGroups) > 0}}">
+            {{tiles.gangCount(actionGroups)}}组杠牌 · 总数+{{tiles.gangCount(actionGroups)}}张
+        </text>
+    </view>
         <view class="cards-display">
         <block wx:for="{{handCards}}" wx:key="index">
             <view class="card-item" bindtap="removeCard" data-index="{{index}}">
@@ -81,7 +100,17 @@ module.exports.totalTiles = totalTiles;
             <text class="card-name">{{item.name}}</text>
             </view>
         </block>
-        <view class="empty-placeholder" wx:if="{{handCards.length === 0}}">
+        <block wx:for="{{actionGroups}}" wx:key="index" wx:for-item="group" wx:for-index="gidx">
+            <view class="meld-group {{group.displayClass}}" bindtap="removeActionGroup" data-index="{{gidx}}">
+                <text class="meld-badge">{{group.type}}</text>
+                <view class="meld-tiles">
+                    <block wx:for="{{group.cards}}" wx:key="index" wx:for-item="card">
+                        <image class="meld-tile" src="{{card.image}}" mode="aspectFit" />
+                    </block>
+                </view>
+            </view>
+        </block>
+        <view class="empty-placeholder" wx:if="{{handCards.length === 0 && actionGroups.length === 0}}">
         <text>请选择麻将牌</text>
         </view>
         </view>
@@ -99,57 +128,6 @@ module.exports.totalTiles = totalTiles;
         </block>
         </view>
     </view>
-
-    <!-- 已操作牌组显示 -->
-    <view class="section card" wx:if="{{actionGroups.length > 0}}">
-    <text class="section-title">已操作牌组</text>
-        <view class="action-groups">
-        <block wx:for="{{actionGroups}}" wx:key="index" wx:for-item="group" wx:for-index="gidx">
-            <view class="action-group">
-            <text class="action-type">{{group.type}}：</text>
-                <view class="group-cards">
-                <block wx:for="{{group.cards}}" wx:key="index" wx:for-item="card" wx:for-index="cidx">
-                    <view class="group-card-item" bindtap="removeActionGroup" data-index="{{gidx}}">
-                    <image class="card-image small" src="{{card.image}}" mode="aspectFit" />
-                    </view>
-                </block>
-                </view>
-            </view>
-        </block>
-        </view>
-    </view>
-
-    <!-- 特殊规则选择 -->
-    <view class="section card">
-    <text class="section-title">特殊规则</text>
-        <view class="special-rules">
-        <block wx:for="{{specialRules}}" wx:key="value">
-        <label class="rule-item">
-        <checkbox checked="{{item.checked}}" bindchange="toggleRule" data-rule="{{item.value}}" />
-        <text class="rule-text">{{item.name}}</text>
-        </label>
-        </block>
-        </view>
-    </view>
-
-    <!-- 圈风风位选择 -->
-    <view class="section card">
-        <view class="wind-selection">
-            <view class="wind-item">
-            <text>圈风：</text>
-            <picker range="{{windOptions}}" value="{{roundWind}}" bindchange="changeRoundWind">
-                <view class="picker">{{windOptions[roundWind]}}圈</view>
-                </picker>
-                </view>
-            
-            <view class="wind-item">
-            <text>风位：</text>
-            <picker range="{{windOptions}}" value="{{seatWind}}" bindchange="changeSeatWind">
-                <view class="picker">{{windOptions[seatWind]}}风</view>
-                </picker>
-                </view>
-                </view>
-            </view>
 
     <!-- 胡牌信息 -->
     <view class="section card">
@@ -239,6 +217,34 @@ module.exports.totalTiles = totalTiles;
                 </view>
             </view>
             </view>
+    </view>
+
+    <!-- 次要设置放在结果之后，减少查看胡牌信息所需滚动距离 -->
+    <view class="section card compact-settings">
+        <text class="section-title">特殊规则</text>
+        <view class="special-rules">
+            <block wx:for="{{specialRules}}" wx:key="value">
+                <label class="rule-item">
+                    <checkbox checked="{{item.checked}}" bindchange="toggleRule" data-rule="{{item.value}}" />
+                    <text class="rule-text">{{item.name}}</text>
+                </label>
+            </block>
+        </view>
+        <view class="settings-divider"></view>
+        <view class="wind-selection">
+            <view class="wind-item">
+                <text>圈风</text>
+                <picker range="{{windOptions}}" value="{{roundWind}}" bindchange="changeRoundWind">
+                    <view class="picker">{{windOptions[roundWind]}}圈</view>
+                </picker>
+            </view>
+            <view class="wind-item">
+                <text>风位</text>
+                <picker range="{{windOptions}}" value="{{seatWind}}" bindchange="changeSeatWind">
+                    <view class="picker">{{windOptions[seatWind]}}风</view>
+                </picker>
+            </view>
+        </view>
     </view>
 
     <!-- 功能按钮 -->

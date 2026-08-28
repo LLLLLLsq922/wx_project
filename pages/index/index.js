@@ -153,6 +153,15 @@ Page({
         }
     },
 
+    /**
+     * 选牌成功后的轻触觉反馈；不支持振动或用户关闭振动时静默降级。
+     */
+    triggerSelectionFeedback: function () {
+        if (typeof wx !== 'undefined' && wx.vibrateShort) {
+            wx.vibrateShort({ type: 'light', fail: function () {} });
+        }
+    },
+
     addToHand: function (card) {
         var handCards = this.data.handCards;
         var actionGroups = this.data.actionGroups;
@@ -181,6 +190,7 @@ Page({
         }
         var newHandCards = handCards.concat([card]);
         this.setData({ handCards: newHandCards, showResult: false });
+        this.triggerSelectionFeedback();
         this.updateWinTileDisplay();
     },
 
@@ -206,6 +216,7 @@ Page({
         }
         var newTempChiCards = tempChiCards.concat([card]);
         this.setData({ tempChiCards: newTempChiCards, showResult: false });
+        this.triggerSelectionFeedback();
         if (newTempChiCards.length === 3) {
             this.completeChi();
         }
@@ -233,6 +244,7 @@ Page({
 
         var newGroup = {
             type: '吃',
+            displayClass: 'meld-chi',
             cards: tempChiCards.slice()
         };
         var newActionGroups = actionGroups.concat([newGroup]);
@@ -304,6 +316,8 @@ Page({
 
         var newGroup = {
             type: actionType,
+            displayClass: mode === 'peng' ? 'meld-peng' :
+                          (mode === 'minggang' ? 'meld-minggang' : 'meld-angang'),
             cards: operationCards
         };
         var newActionGroups = actionGroups.concat([newGroup]);
@@ -312,6 +326,7 @@ Page({
             actionGroups: newActionGroups,
             showResult: false
         });
+        this.triggerSelectionFeedback();
         this.updateWinTileDisplay();
         wx.showToast({ title: actionType + '成功', icon: 'success', duration: 1000 });
     },

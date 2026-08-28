@@ -72,3 +72,20 @@ test('牌型完整但不足8番时仍进入规则列表', function () {
         { method: 'switchTab', url: '/pages/rules/rules' }
     ]);
 });
+
+test('成功选牌时请求轻微振动反馈，不支持振动时静默降级', function () {
+    var vibrationType = null;
+    global.wx = {
+        vibrateShort: function (options) {
+            vibrationType = options.type;
+        }
+    };
+
+    pageDefinition.triggerSelectionFeedback();
+    assert.equal(vibrationType, 'light');
+
+    global.wx = {};
+    assert.doesNotThrow(function () {
+        pageDefinition.triggerSelectionFeedback();
+    });
+});

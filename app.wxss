@@ -4,8 +4,10 @@ page {
     font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'Segoe UI', Arial, sans-serif;
     font-size: 28rpx;
     line-height: 1.6;
+    width: 100%;
+    overflow-x: hidden;
   }
-  
+
   .container {
     padding: 20rpx;
     min-height: 100vh;
@@ -77,4 +79,3 @@ page {
     padding: 40rpx;
     color: #ff6b35;
   }
-  

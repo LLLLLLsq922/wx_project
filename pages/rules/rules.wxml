@@ -37,7 +37,7 @@
     <!-- 分组浏览模式 -->
     <block wx:else>
         <!-- 番数筛选标签 -->
-        <scroll-view class="fan-filter" scroll-x>
+        <view class="fan-filter">
             <block wx:for="{{fanOptions}}" wx:key="fan" wx:for-item="opt">
                 <view
                     class="fan-tag {{selectedFan === opt.fan ? 'active' : ''}}"
@@ -47,7 +47,7 @@
                     {{opt.label}}
                 </view>
             </block>
-        </scroll-view>
+        </view>
 
         <!-- 分组列表 -->
         <view class="group-list">

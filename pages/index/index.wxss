@@ -763,4 +763,424 @@
       font-size: 24rpx;
     }
   }
-  
+
+/* 手机端紧凑布局：覆盖上方历史样式，确保首屏优先展示手牌与胡牌信息 */
+.container {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: 12rpx;
+  padding-bottom: 40rpx;
+}
+
+.container view,
+.container label,
+.container picker,
+.container button {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.section {
+  margin-bottom: 12rpx;
+}
+
+.card {
+  padding: 16rpx;
+  border-radius: 18rpx;
+  box-shadow: 0 3rpx 14rpx rgba(34, 54, 44, 0.06);
+}
+
+.section-title {
+  margin-bottom: 10rpx;
+  font-size: 27rpx;
+  line-height: 1.35;
+}
+
+.hand-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.hand-section-heading .section-title {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.gang-count-hint {
+  flex-shrink: 0;
+  padding: 4rpx 9rpx;
+  color: #b05b00;
+  font-size: 18rpx;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  border: 1rpx solid #ffd08a;
+  border-radius: 16rpx;
+  background: #fff7e8;
+}
+
+/* 牌库保持每门一行，九张牌均分可用宽度 */
+.card-selector,
+.card-category {
+  gap: 0;
+  margin: 0;
+}
+
+.card-buttons {
+  gap: 1rpx;
+  padding: 2rpx 0;
+}
+
+.card-btn-container {
+  min-width: 0;
+  padding: 2rpx 0;
+  border-radius: 8rpx;
+  transform-origin: center;
+  transition: transform 100ms ease-out, opacity 100ms ease-out,
+              background-color 100ms ease-out;
+}
+
+.tile-button-pressed {
+  transform: scale(0.86) translateY(3rpx);
+  opacity: 0.72;
+  background: rgba(7, 193, 96, 0.12);
+}
+
+.card-btn {
+  width: 100%;
+  max-width: 56rpx;
+  height: 76rpx;
+  border-width: 1rpx;
+  border-radius: 5rpx;
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 14张手牌尽量在一行完整呈现 */
+.cards-display {
+  gap: 2rpx;
+  min-height: 76rpx;
+  padding: 0;
+  align-items: flex-start;
+}
+
+.card-item {
+  flex: 0 0 47rpx;
+  min-width: 0;
+  gap: 2rpx;
+}
+
+.card-image {
+  width: 100%;
+  height: 74rpx;
+  border-width: 1rpx;
+  border-radius: 5rpx;
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-name {
+  display: none;
+}
+
+.empty-placeholder {
+  padding: 16rpx 0;
+  font-size: 24rpx;
+}
+
+/* 操作区压缩成一行工具条 */
+.mode-buttons {
+  gap: 6rpx;
+  margin-bottom: 0;
+}
+
+.mode-btn {
+  padding: 9rpx 4rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  border-radius: 9rpx;
+}
+
+.mode-hint {
+  margin-top: 8rpx;
+  padding: 7rpx 10rpx;
+  font-size: 20rpx;
+}
+
+.action-groups {
+  gap: 8rpx;
+}
+
+.action-group {
+  gap: 10rpx;
+  padding: 8rpx 10rpx;
+}
+
+.action-type {
+  min-width: 62rpx;
+  font-size: 23rpx;
+}
+
+.group-cards {
+  gap: 4rpx;
+}
+
+.card-image.small {
+  width: 36rpx;
+  height: 52rpx;
+}
+
+/* 已完成的吃碰杠直接嵌入当前手牌，并用成组色块与角标区分 */
+.meld-group {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  min-width: 0;
+  padding: 18rpx 4rpx 4rpx;
+  border: 2rpx solid #cfd8d3;
+  border-radius: 8rpx;
+  background: #f5f8f6;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
+.meld-group:active {
+  transform: scale(0.96);
+  opacity: 0.78;
+}
+
+.meld-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18rpx;
+  color: #fff;
+  font-size: 15rpx;
+  font-weight: 600;
+  line-height: 18rpx;
+  text-align: center;
+  border-radius: 5rpx 5rpx 0 0;
+  background: #708078;
+}
+
+.meld-tiles {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rpx;
+}
+
+.meld-tile {
+  width: 43rpx;
+  height: 64rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.1);
+  border-radius: 4rpx;
+  background: #fff;
+}
+
+.meld-chi {
+  border-color: #76d7a2;
+  background: #edf9f2;
+}
+
+.meld-chi .meld-badge {
+  background: #07a854;
+}
+
+.meld-peng {
+  border-color: #82baf3;
+  background: #edf5fe;
+}
+
+.meld-peng .meld-badge {
+  background: #1989fa;
+}
+
+.meld-minggang {
+  border-color: #ffc66b;
+  background: #fff8e8;
+}
+
+.meld-minggang .meld-badge {
+  background: #e89000;
+}
+
+.meld-angang {
+  border-color: #b69aeb;
+  background: #f6f1ff;
+}
+
+.meld-angang .meld-badge {
+  background: #7651c9;
+}
+
+/* 胡牌信息卡保持矮而醒目 */
+.hu-info,
+.hu-result {
+  gap: 7rpx;
+}
+
+.hu-info-row {
+  align-items: flex-start;
+  gap: 10rpx;
+}
+
+.hu-label {
+  min-width: 96rpx;
+  font-size: 23rpx;
+}
+
+.win-display {
+  min-height: 62rpx;
+  gap: 10rpx;
+}
+
+.waiting-text,
+.no-tingpai text {
+  font-size: 23rpx;
+}
+
+.tingpai-list {
+  gap: 5rpx;
+}
+
+.tingpai-tile {
+  width: 52rpx;
+  height: 74rpx;
+}
+
+.tingpai-fan {
+  font-size: 18rpx;
+}
+
+.winning-tile-wrap {
+  gap: 3rpx;
+}
+
+.winning-tile {
+  width: 64rpx;
+  height: 90rpx;
+  border-width: 2rpx;
+}
+
+.winning-label {
+  font-size: 18rpx;
+}
+
+.hu-result-header.success .hu-status-text,
+.hu-result-header.error .hu-status-text,
+.hu-status-text {
+  font-size: 24rpx;
+}
+
+.hu-status-icon {
+  font-size: 25rpx;
+}
+
+.hu-total-fan-num {
+  font-size: 40rpx;
+}
+
+.hu-total-fan-unit {
+  font-size: 22rpx;
+}
+
+.hu-fan-list {
+  gap: 6rpx;
+}
+
+.hu-fan-tag {
+  gap: 4rpx;
+  padding: 4rpx 9rpx;
+}
+
+.hu-fan-name {
+  font-size: 19rpx;
+}
+
+.hu-fan-count {
+  padding: 1rpx 6rpx;
+  font-size: 17rpx;
+}
+
+.hu-no-tip {
+  padding: 3rpx 0;
+}
+
+.hu-no-tip text {
+  font-size: 21rpx;
+}
+
+/* 次要规则与风位合并成一张紧凑设置卡 */
+.compact-settings .section-title {
+  margin-bottom: 8rpx;
+}
+
+.special-rules {
+  gap: 8rpx;
+  padding: 0;
+}
+
+.rule-item {
+  flex-basis: calc(33.333% - 6rpx);
+  gap: 4rpx;
+  padding: 9rpx 2rpx;
+  font-size: 21rpx;
+  border-radius: 8rpx;
+}
+
+.rule-text {
+  font-size: 21rpx;
+}
+
+checkbox .wx-checkbox-input {
+  width: 28rpx;
+  height: 28rpx;
+  margin: 0;
+}
+
+.settings-divider {
+  height: 1rpx;
+  margin: 12rpx 0;
+  background: #eef1ef;
+}
+
+.wind-selection {
+  flex-direction: row;
+  gap: 12rpx;
+}
+
+.wind-item {
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.wind-item text {
+  min-width: 48rpx;
+  font-size: 22rpx;
+}
+
+.wind-item picker {
+  flex: 1;
+}
+
+.picker {
+  padding: 8rpx 10rpx;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+.action-buttons {
+  flex-direction: row;
+  gap: 10rpx;
+  margin: 16rpx 0;
+}
+
+.action-buttons .btn {
+  padding: 13rpx 8rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+}

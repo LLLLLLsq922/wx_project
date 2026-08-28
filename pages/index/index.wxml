@@ -86,7 +86,7 @@ module.exports.targetTiles = targetTiles;
     </view>
 
     <!-- 手牌显示区域 -->
-    <view class="section card">
+    <view class="section card hand-card">
     <view class="hand-section-heading">
         <text class="section-title">当前手牌（{{tiles.totalTiles(handCards, actionGroups)}}/{{tiles.targetTiles(actionGroups)}}张）</text>
         <text class="gang-count-hint" wx:if="{{tiles.gangCount(actionGroups) > 0}}">

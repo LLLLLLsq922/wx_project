@@ -832,11 +832,13 @@
 }
 
 .card-buttons {
-  gap: 1rpx;
-  padding: 2rpx 0;
+  justify-content: center;
+  gap: 2rpx;
+  padding: 1rpx 0;
 }
 
 .card-btn-container {
+  flex: 0 0 62rpx;
   min-width: 0;
   padding: 2rpx 0;
   border-radius: 8rpx;
@@ -853,8 +855,8 @@
 
 .card-btn {
   width: 100%;
-  max-width: 56rpx;
-  height: 76rpx;
+  max-width: 62rpx;
+  height: 93rpx;
   border-width: 1rpx;
   border-radius: 5rpx;
   box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
@@ -862,21 +864,21 @@
 
 /* 14张手牌尽量在一行完整呈现 */
 .cards-display {
-  gap: 2rpx;
-  min-height: 76rpx;
+  gap: 0;
+  min-height: 77rpx;
   padding: 0;
   align-items: flex-start;
 }
 
 .card-item {
-  flex: 0 0 47rpx;
+  flex: 0 0 50rpx;
   min-width: 0;
   gap: 2rpx;
 }
 
 .card-image {
   width: 100%;
-  height: 74rpx;
+  height: 75rpx;
   border-width: 1rpx;
   border-radius: 5rpx;
   box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
@@ -889,6 +891,11 @@
 .empty-placeholder {
   padding: 16rpx 0;
   font-size: 24rpx;
+}
+
+.hand-card {
+  padding-left: 8rpx;
+  padding-right: 8rpx;
 }
 
 /* 操作区压缩成一行工具条 */
@@ -940,7 +947,7 @@
   flex: 0 0 auto;
   align-items: flex-end;
   min-width: 0;
-  padding: 18rpx 4rpx 4rpx;
+  padding: 18rpx 2rpx 3rpx;
   border: 2rpx solid #cfd8d3;
   border-radius: 8rpx;
   background: #f5f8f6;
@@ -970,12 +977,12 @@
 .meld-tiles {
   display: flex;
   align-items: flex-end;
-  gap: 1rpx;
+  gap: 0;
 }
 
 .meld-tile {
-  width: 43rpx;
-  height: 64rpx;
+  width: 46rpx;
+  height: 69rpx;
   border: 1rpx solid rgba(0, 0, 0, 0.1);
   border-radius: 4rpx;
   background: #fff;
@@ -1044,12 +1051,12 @@
 }
 
 .tingpai-list {
-  gap: 5rpx;
+  gap: 2rpx;
 }
 
 .tingpai-tile {
-  width: 52rpx;
-  height: 74rpx;
+  width: 58rpx;
+  height: 87rpx;
 }
 
 .tingpai-fan {
@@ -1061,8 +1068,8 @@
 }
 
 .winning-tile {
-  width: 64rpx;
-  height: 90rpx;
+  width: 70rpx;
+  height: 105rpx;
   border-width: 2rpx;
 }
 

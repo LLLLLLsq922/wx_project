@@ -61,8 +61,10 @@ test('当前手牌上限随杠牌组数增加，并显示补牌数量提示', fu
 test('手机端牌图使用放大后的紧凑尺寸', function () {
     var wxss = read('pages/index/index.wxss');
 
-    assert.match(wxss, /\.card-btn\s*\{[^}]*max-width:\s*56rpx[^}]*height:\s*76rpx/s);
-    assert.match(wxss, /\.card-item\s*\{[^}]*flex:\s*0 0 47rpx/s);
-    assert.match(wxss, /\.meld-tile\s*\{[^}]*width:\s*43rpx[^}]*height:\s*64rpx/s);
-    assert.match(wxss, /\.card-buttons\s*\{[^}]*gap:\s*1rpx/s);
+    assert.match(wxss, /\.card-btn\s*\{[^}]*max-width:\s*62rpx[^}]*height:\s*93rpx/s);
+    assert.match(wxss, /\.card-item\s*\{[^}]*flex:\s*0 0 50rpx/s);
+    assert.match(wxss, /\.meld-tile\s*\{[^}]*width:\s*46rpx[^}]*height:\s*69rpx/s);
+    assert.match(wxss, /\.card-buttons\s*\{[^}]*justify-content:\s*center[^}]*gap:\s*2rpx/s);
+    assert.match(wxss, /\.card-btn-container\s*\{[^}]*flex:\s*0 0 62rpx/s);
+    assert.match(wxss, /\.hand-card\s*\{[^}]*padding-left:\s*8rpx[^}]*padding-right:\s*8rpx/s);
 });

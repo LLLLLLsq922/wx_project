@@ -75,17 +75,46 @@ test('牌型完整但不足8番时仍进入规则列表', function () {
 
 test('成功选牌时请求轻微振动反馈，不支持振动时静默降级', function () {
     var vibrationType = null;
+    var soundCalls = [];
     global.wx = {
         vibrateShort: function (options) {
             vibrationType = options.type;
+        },
+        createInnerAudioContext: function () {
+            return {
+                stop: function () { soundCalls.push('stop'); },
+                seek: function (position) { soundCalls.push('seek:' + position); },
+                play: function () { soundCalls.push('play'); },
+                destroy: function () {}
+            };
         }
     };
 
-    pageDefinition.triggerSelectionFeedback();
+    var page = {};
+    page.initTileAudio = pageDefinition.initTileAudio;
+    page.playTileSound = pageDefinition.playTileSound;
+    page.triggerSelectionFeedback = pageDefinition.triggerSelectionFeedback;
+    page.triggerSelectionFeedback();
     assert.equal(vibrationType, 'light');
+    assert.deepEqual(soundCalls, ['stop', 'seek:0', 'play']);
 
     global.wx = {};
     assert.doesNotThrow(function () {
-        pageDefinition.triggerSelectionFeedback();
+        pageDefinition.triggerSelectionFeedback.call({
+            playTileSound: function () {}
+        });
     });
+});
+
+test('页面卸载时销毁麻将牌音频实例', function () {
+    var destroyed = false;
+    var page = {
+        tileAudio: {
+            destroy: function () { destroyed = true; }
+        }
+    };
+
+    pageDefinition.onUnload.call(page);
+    assert.equal(destroyed, true);
+    assert.equal(page.tileAudio, null);
 });

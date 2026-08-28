@@ -50,10 +50,39 @@ Page({
     },
 
     onLoad: function () {
+        this.initTileAudio();
         this.initCards();
     },
 
     onShow: function () {},
+
+    onUnload: function () {
+        if (this.tileAudio) {
+            this.tileAudio.destroy();
+            this.tileAudio = null;
+        }
+    },
+
+    /**
+     * 初始化可复用的麻将牌点击音效，避免每次操作都创建音频实例。
+     */
+    initTileAudio: function () {
+        if (this.tileAudio || typeof wx === 'undefined' || !wx.createInnerAudioContext) return;
+        var audio = wx.createInnerAudioContext();
+        audio.src = '/audio/mahjong-tile-click.mp3';
+        audio.volume = 0.55;
+        audio.obeyMuteSwitch = true;
+        this.tileAudio = audio;
+    },
+
+    playTileSound: function () {
+        if (!this.tileAudio) this.initTileAudio();
+        if (!this.tileAudio) return;
+        // 三步分别容错，避免部分机型不支持立即 seek 时连 play 也被跳过。
+        try { this.tileAudio.stop(); } catch (e1) { /* 静默 */ }
+        try { this.tileAudio.seek(0); } catch (e2) { /* 静默 */ }
+        try { this.tileAudio.play(); } catch (e3) { /* 静默 */ }
+    },
 
     /**
      * 初始化麻将牌数据
@@ -160,6 +189,7 @@ Page({
         if (typeof wx !== 'undefined' && wx.vibrateShort) {
             wx.vibrateShort({ type: 'light', fail: function () {} });
         }
+        this.playTileSound();
     },
 
     addToHand: function (card) {
@@ -342,6 +372,7 @@ Page({
                 var newHandCards = handCards.slice();
                 newHandCards.splice(index, 1);
                 this.setData({ handCards: newHandCards, showResult: false });
+                this.triggerSelectionFeedback();
                 this.updateWinTileDisplay();
             }
         } catch (error) { /* 静默 */ }
@@ -358,6 +389,7 @@ Page({
                 var newActionGroups = actionGroups.slice();
                 newActionGroups.splice(index, 1);
                 this.setData({ actionGroups: newActionGroups, showResult: false });
+                this.triggerSelectionFeedback();
                 this.updateWinTileDisplay();
             }
         } catch (error) { /* 静默 */ }

@@ -206,7 +206,26 @@ module.exports.totalTiles = totalTiles;
                                 </block>
                             </view>
                         </block>
-                        <!-- 不可胡牌 -->
+                        <!-- 牌型成立，但未达到国标麻将至少8番的门槛 -->
+                        <block wx:elif="{{result.isHuShape && result.reason === 'LESS_THAN_8_FAN'}}">
+                            <view class="hu-result-header error">
+                                <text class="hu-status-icon">⚠️</text>
+                                <text class="hu-status-text">不足8番，不能和牌</text>
+                            </view>
+                            <view class="hu-total-fan">
+                                <text class="hu-total-fan-num">{{result.totalFan}}</text>
+                                <text class="hu-total-fan-unit">番</text>
+                            </view>
+                            <view class="hu-fan-list">
+                                <block wx:for="{{result.fanList}}" wx:key="name" wx:for-item="fan">
+                                    <view class="hu-fan-tag">
+                                        <text class="hu-fan-name">{{fan.name}}</text>
+                                        <text class="hu-fan-count">{{fan.fan}}番</text>
+                                    </view>
+                                </block>
+                            </view>
+                        </block>
+                        <!-- 牌型结构不成立 -->
                         <block wx:else>
                             <view class="hu-result-header error">
                                 <text class="hu-status-icon">❌</text>

@@ -18,6 +18,7 @@ var YAOJIU_NAMES = ['1万', '9万', '1条', '9条', '1筒', '9筒',
                     '东', '南', '西', '北', '中', '发', '白'];
 var ZI_NAMES = ['东', '南', '西', '北', '中', '发', '白'];
 var GREEN_TILES = ['2条', '3条', '4条', '6条', '8条', '发'];
+var MIN_HU_FAN = 8;
 
 // ====================================================================
 // 调试日志开关与辅助函数
@@ -125,15 +126,28 @@ function calculateHu(handCards, actionGroups, options) {
     var huResult = checkHu(handCards, actionGroups);
     if (!huResult.canHu) {
         _log('=== calculateHu end: NOT_HU ===');
-        return { canHu: false, totalFan: 0, fanList: [], pattern: '' };
+        return {
+            canHu: false,
+            isHuShape: false,
+            reason: 'INVALID_SHAPE',
+            totalFan: 0,
+            fanList: [],
+            pattern: ''
+        };
     }
 
     var fanResult = calculateFan(handCards, actionGroups, options, huResult);
+    var meetsMinimumFan = fanResult.totalFan >= MIN_HU_FAN;
 
-    _log('=== calculateHu end: canHu=true, pattern=' + huResult.pattern +
-         ', totalFan=' + fanResult.totalFan + ' ===');
+    _log('=== calculateHu end: canHu=' + meetsMinimumFan +
+         ', isHuShape=true, pattern=' + huResult.pattern +
+         ', totalFan=' + fanResult.totalFan +
+         (meetsMinimumFan ? '' : ', reason=LESS_THAN_8_FAN') + ' ===');
     return {
-        canHu: true,
+        // 国标麻将必须达到 8 番才是合法和牌。
+        canHu: meetsMinimumFan,
+        isHuShape: true,
+        reason: meetsMinimumFan ? '' : 'LESS_THAN_8_FAN',
         totalFan: fanResult.totalFan,
         fanList: fanResult.fanList,
         pattern: huResult.pattern
@@ -848,6 +862,14 @@ function calculateFan(handCards, actionGroups, options, huResult) {
 
         var fanList = applyExclusions(matched);
         var total = sumFans(fanList);
+
+        // 无番和不是与其他番种并行匹配的普通番种，而是合法标准牌型
+        // 在所有番种及“不计”规则处理完毕后仍为 0 番时的兜底番种。
+        // 特殊牌型均自带番种，不会进入此分支。
+        if (!huResult.special && total === 0) {
+            fanList = [{ name: '无番和', fan: 8 }];
+            total = 8;
+        }
         _log('calculateFan decomp#' + i + ' afterExclusions(' + fanList.length + '): ' +
              _fanListSummary(fanList) + ' | total=' + total);
 
@@ -1423,7 +1445,7 @@ function fanSanSeSanJieGao(allSets) {
     return false;
 }
 
-// 无番和（需要刻意凑，反向检测，这里返回 false 让其他番优先）
+// 无番和由 calculateFan 在其他所有番种结算后反向判定。
 function fanWuFanHe() { return false; }
 
 function fanMiaoShouHuiChun(allSets, handCards, actionGroups, options) {
@@ -1746,7 +1768,10 @@ function fanBianZhang(allSets, handCards, actionGroups, options) {
     var shunzi = allSets.filter(function (s) {
         return s.kind === 'shunzi' && s.tiles.indexOf(win) !== -1;
     });
-    return shunzi.some(function (s) { return s.start === 1 || s.start === 7; });
+    return shunzi.some(function (s) {
+        return (s.start === 1 && win === '3' + s.suit) ||
+               (s.start === 7 && win === '7' + s.suit);
+    });
 }
 
 // 坎张：胡顺子的中间张

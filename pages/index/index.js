@@ -440,6 +440,8 @@ Page({
                 var calcResult = mahjongUtil.calculateHu(handCards, actionGroups, options);
                 huResult = {
                     canHu: calcResult.canHu,
+                    isHuShape: calcResult.isHuShape,
+                    reason: calcResult.reason || '',
                     totalFan: calcResult.totalFan,
                     fanList: calcResult.fanList,
                     pattern: calcResult.pattern || ''

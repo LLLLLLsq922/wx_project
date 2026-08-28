@@ -518,9 +518,26 @@ Page({
     },
 
     /**
-     * 跳转到牌型规则页（tabBar 页需用 wx.switchTab）
+     * 未形成合法完整胡牌时进入规则列表；已经胡牌时直接查看最高番种。
      */
     goToRules: function () {
+        var result = this.data.result || {};
+        var fanList = result.fanList || [];
+        var hasCompleteHu = this.data.winTileState === 'winning' &&
+                            result.canHu && fanList.length > 0;
+
+        if (hasCompleteHu) {
+            var highestFan = fanList[0];
+            for (var i = 1; i < fanList.length; i++) {
+                if (fanList[i].fan > highestFan.fan) highestFan = fanList[i];
+            }
+            wx.navigateTo({
+                url: '/pages/rules-detail/rules-detail?name=' +
+                     encodeURIComponent(highestFan.name)
+            });
+            return;
+        }
+
         wx.switchTab({ url: '/pages/rules/rules' });
     }
 });

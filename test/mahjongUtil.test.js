@@ -144,6 +144,26 @@ test('七对允许四张同牌作为两对并加计四归一', function () {
     assertHasFan(result, '四归一', 2);
 });
 
+test('特殊牌型与标准拆法统一比较并保留去重后的候选', function () {
+    var result = calculate([
+        '1万', '1万', '1万', '1万',
+        '2万', '2万', '2万', '2万',
+        '3万', '3万', '3万', '3万',
+        '4万', '4万'
+    ], { winTile: '4万' });
+
+    assert.equal(result.pattern, '标准');
+    assert.equal(result.totalFan, 85);
+    assert.equal(result.selectedCandidate.pattern, '标准');
+    assert.equal(result.selectedCandidate.pair, '4万');
+    assert.deepEqual(result.alternatives.map(function (candidate) {
+        return [candidate.pattern, candidate.pair, candidate.totalFan, candidate.reason];
+    }), [
+        ['七对', null, 66, 'LOWER_TOTAL_FAN'],
+        ['标准', '1万', 48, 'LOWER_TOTAL_FAN']
+    ]);
+});
+
 test('七星不靠按组合龙骨架识别为24番', function () {
     var result = calculate([
         '1万', '4万', '7万',
@@ -549,6 +569,8 @@ test('三杠与四杠保留规则允许的杠牌加计', function () {
     assertHasFan(fourKongs, '四杠', 88);
     assertHasFan(fourKongs, '双暗杠', 8);
     assertHasFan(fourKongs, '双明杠', 4);
+    assertNotHasFan(fourKongs, '三杠');
+    assertNotHasFan(fourKongs, '碰碰和');
     assertNotHasFan(fourKongs, '单钓将');
 });
 
@@ -563,6 +585,43 @@ test('全大可与断幺叠加', function () {
 
     assertHasFan(result, '全大', 24);
     assertHasFan(result, '断幺', 2);
+});
+
+test('清龙不复用自身三副顺子计连六和老少副，但可用第四副计喜相逢', function () {
+    var result = calculate([
+        '1万', '2万', '3万',
+        '4万', '5万', '6万',
+        '7万', '8万', '9万',
+        '1条', '2条', '3条',
+        '东', '东'
+    ], { winTile: '东' });
+
+    assertHasFan(result, '清龙', 16);
+    assertHasFan(result, '喜相逢', 1);
+    assertNotHasFan(result, '连六');
+    assertNotHasFan(result, '老少副');
+});
+
+test('三色三同顺和三同刻不重复计其两副组合', function () {
+    var tripleChow = calculate([
+        '1万', '2万', '3万',
+        '1条', '2条', '3条',
+        '1筒', '2筒', '3筒',
+        '4万', '5万', '6万',
+        '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(tripleChow, '三色三同顺', 8);
+    assertNotHasFan(tripleChow, '喜相逢');
+
+    var triplePung = calculate([
+        '1万', '1万', '1万',
+        '1条', '1条', '1条',
+        '1筒', '1筒', '1筒',
+        '4万', '5万', '6万',
+        '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(triplePung, '三同刻', 16);
+    assertNotHasFan(triplePung, '双同刻');
 });
 
 test('不求人排除门前清和自摸', function () {

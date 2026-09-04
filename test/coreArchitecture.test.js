@@ -211,6 +211,24 @@ test('国标适配器兼容旧牌对象并返回统一结果字段', function ()
     }));
 });
 
+test('国标统一结果返回最高分拆法及其他候选', function () {
+    var result = guobiao.calculateWin({
+        concealedTiles: legacyTiles([
+            '1万', '1万', '1万', '1万',
+            '2万', '2万', '2万', '2万',
+            '3万', '3万', '3万', '3万',
+            '4万', '4万'
+        ]),
+        context: { winTile: '4万' }
+    });
+
+    assert.equal(result.selectedCandidate.pattern, '标准');
+    assert.equal(result.selectedCandidate.totalFan, result.totalValue);
+    assert.ok(result.alternatives.some(function (candidate) {
+        return candidate.pattern === '七对' && candidate.reason === 'LOWER_TOTAL_FAN';
+    }));
+});
+
 test('国标适配器在进入旧规则引擎前阻止第五张同牌', function () {
     var result = guobiao.calculateWin({
         concealedTiles: [

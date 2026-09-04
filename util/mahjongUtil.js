@@ -147,7 +147,8 @@ function calculateHu(handCards, actionGroups, options) {
     var meetsMinimumFan = fanResult.totalFan >= MIN_HU_FAN;
 
     _log('=== calculateHu end: canHu=' + meetsMinimumFan +
-         ', isHuShape=true, pattern=' + huResult.pattern +
+         ', isHuShape=true, pattern=' +
+         (fanResult.selectedCandidate ? fanResult.selectedCandidate.pattern : huResult.pattern) +
          ', totalFan=' + fanResult.totalFan +
          (meetsMinimumFan ? '' : ', reason=LESS_THAN_8_FAN') + ' ===');
     return {
@@ -157,7 +158,9 @@ function calculateHu(handCards, actionGroups, options) {
         reason: meetsMinimumFan ? '' : 'LESS_THAN_8_FAN',
         totalFan: fanResult.totalFan,
         fanList: fanResult.fanList,
-        pattern: huResult.pattern
+        pattern: fanResult.selectedCandidate ? fanResult.selectedCandidate.pattern : huResult.pattern,
+        selectedCandidate: fanResult.selectedCandidate || null,
+        alternatives: fanResult.alternatives || []
     };
 }
 
@@ -188,40 +191,33 @@ function checkHu(handCards, actionGroups) {
         }
     }
 
+    var shapeCandidates = [];
+
     // 除组合龙可带一副普通面子外，其余特殊牌型均要求无操作组。
     if (actionGroups.length === 0) {
         if (checkShiSanYao(handCards)) {
-            _log('checkHu OK: 十三幺');
-            return { canHu: true, pattern: '十三幺', special: '十三幺' };
+            shapeCandidates.push({ pattern: '十三幺', special: '十三幺' });
         }
         if (checkQiDuiPattern(handCards)) {
-            _log('checkHu OK: 七对');
-            return { canHu: true, pattern: '七对', special: '七对' };
+            shapeCandidates.push({ pattern: '七对', special: '七对' });
         }
         if (checkQiXingBuKao(handCards)) {
-            _log('checkHu OK: 七星不靠');
-            return { canHu: true, pattern: '七星不靠', special: '七星不靠' };
+            shapeCandidates.push({ pattern: '七星不靠', special: '七星不靠' });
         }
         if (checkQuanBuKao(handCards)) {
-            _log('checkHu OK: 全不靠');
-            return { canHu: true, pattern: '全不靠', special: '全不靠' };
+            shapeCandidates.push({ pattern: '全不靠', special: '全不靠' });
         }
-        _log('checkHu: 特殊牌型均不匹配，尝试标准拆牌');
-    } else {
-        _log('checkHu: 含操作组(' + actionGroups.length + ')，跳过特殊牌型，直接标准拆牌');
     }
 
     var zhl = checkZuHeLongPattern(handCards, actionGroups);
     if (zhl) {
-        _log('checkHu OK: 组合龙, pair=' + zhl.pair);
-        return {
-            canHu: true,
+        shapeCandidates.push({
             pattern: '组合龙',
             special: '组合龙',
             zhlPair: zhl.pair,
             zhlFace: zhl.face,
             zhlKnitted: zhl.knitted
-        };
+        });
     }
 
     // 标准胡牌（4 面子 + 1 将）
@@ -232,12 +228,28 @@ function checkHu(handCards, actionGroups) {
             _log('checkHu decomp#' + d + ': pair=' + decomps[d].pair +
                  ', concealedSets=[' + _concealedSetsSummary(decomps[d].concealedSets) + ']');
         }
-        _log('checkHu OK: 标准, 共 ' + decomps.length + ' 种拆法');
-        return { canHu: true, pattern: '标准', decompositions: decomps };
+        shapeCandidates.push({ pattern: '标准', decompositions: decomps });
     }
 
-    _log('checkHu FAIL: 无法拆牌');
-    return { canHu: false };
+    if (shapeCandidates.length === 0) {
+        _log('checkHu FAIL: 无法拆牌');
+        return { canHu: false };
+    }
+
+    var first = shapeCandidates[0];
+    _log('checkHu OK: 候选=' + shapeCandidates.map(function (candidate) {
+        return candidate.pattern;
+    }).join(','));
+    return {
+        canHu: true,
+        pattern: first.pattern,
+        special: first.special,
+        decompositions: first.decompositions,
+        zhlPair: first.zhlPair,
+        zhlFace: first.zhlFace,
+        zhlKnitted: first.zhlKnitted,
+        shapeCandidates: shapeCandidates
+    };
 }
 
 // --- 十三幺 ---
@@ -787,7 +799,7 @@ var EXCLUSIONS = {
     '大三元': ['双箭刻', '箭刻'],
     '绿一色': [],
     '九莲宝灯': ['清一色', '门前清', '幺九刻'],
-    '四杠': ['单钓将'],
+    '四杠': ['三杠', '碰碰和', '单钓将'],
     '连七对': ['七对', '清一色', '门前清', '单钓将'],
     '十三幺': ['五门齐', '门前清', '单钓将'],
     '清幺九': ['碰碰和', '全带幺', '幺九刻', '无字'],
@@ -810,11 +822,11 @@ var EXCLUSIONS = {
     '全大': ['无字'],
     '全中': ['断幺'],
     '全小': ['无字'],
-    '清龙': [],
+    '清龙': ['连六', '老少副'],
     '三色双龙会': ['老少副', '一般高', '喜相逢', '无字', '缺一门'],
     '一色三步高': [],
     '全带五': ['无字', '断幺'],
-    '三同刻': [],
+    '三同刻': ['双同刻'],
     '三暗刻': ['双暗刻'],
     '全不靠': ['五门齐', '门前清'],
     '组合龙': [],
@@ -822,7 +834,7 @@ var EXCLUSIONS = {
     '小于五': ['无字'],
     '三风刻': [],
     '推不倒': ['缺一门'],
-    '三色三同顺': [],
+    '三色三同顺': ['喜相逢'],
     '三色三节高': [],
     '妙手回春': ['自摸'],
     '杠上开花': ['自摸'],
@@ -857,48 +869,63 @@ function calculateFan(handCards, actionGroups, options, huResult) {
     }
     scoringOptions._onlyWinningTile = getOnlyWinningTile(handCards, actionGroups, scoringOptions.winTile);
 
-    var decomps;
-    if (huResult.special) {
-        decomps = [{ pair: null, concealedSets: [], special: huResult.special }];
-    } else {
-        decomps = huResult.decompositions;
-    }
+    var shapes = huResult.shapeCandidates || [huResult];
+    var best = null;
+    var candidates = [];
+    var seenCandidates = {};
 
-    _log('calculateFan enter: pattern=' + huResult.pattern +
-         ', special=' + (huResult.special || 'none') +
-         ', decomps=' + decomps.length +
+    _log('calculateFan enter: shapes=' + shapes.length +
          ', options=' + JSON.stringify(options || {}));
 
-    var best = null;
+    for (var shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
+        var shape = shapes[shapeIndex];
+        var decomps = shape.special
+            ? [{ pair: shape.zhlPair || null, concealedSets: [], special: shape.special }]
+            : shape.decompositions;
 
-    for (var i = 0; i < decomps.length; i++) {
-        var allSets = huResult.special
-            ? analyzeSpecial(huResult.special, handCards, actionGroups, huResult, scoringOptions)
-            : analyzeDecomposition(decomps[i], actionGroups, scoringOptions);
+        for (var i = 0; i < decomps.length; i++) {
+            var allSets = shape.special
+                ? analyzeSpecial(shape.special, handCards, actionGroups, shape, scoringOptions)
+                : analyzeDecomposition(decomps[i], actionGroups, scoringOptions);
+            var candidateKey = getScoringCandidateKey(shape.pattern, allSets);
+            if (seenCandidates[candidateKey]) continue;
+            seenCandidates[candidateKey] = true;
 
-        _log('calculateFan decomp#' + i + ': pair=' + (decomps[i].pair || (huResult.zhlPair || '-')) +
-             ', allSets=[' + _allSetsSummary(allSets) + ']');
+            _log('calculateFan candidate#' + candidates.length + ': pattern=' + shape.pattern +
+                 ', pair=' + (decomps[i].pair || (shape.zhlPair || '-')) +
+                 ', allSets=[' + _allSetsSummary(allSets) + ']');
 
-        var matched = collectMatchedFans(allSets, handCards, actionGroups, scoringOptions, huResult);
-        _log('calculateFan decomp#' + i + ' matched(' + Object.keys(matched).length + '): ' +
-             _matchedSummary(matched));
+            var matched = collectMatchedFans(allSets, handCards, actionGroups, scoringOptions, shape);
+            _log('calculateFan candidate#' + candidates.length + ' matched(' + Object.keys(matched).length + '): ' +
+                 _matchedSummary(matched));
 
-        var fanList = applyExclusions(matched);
-        var total = sumFans(fanList);
+            var fanList = applyExclusions(matched);
+            var total = sumFans(fanList);
 
-        // 无番和不是与其他番种并行匹配的普通番种，而是合法标准牌型
-        // 在所有番种及“不计”规则处理完毕后仍为 0 番时的兜底番种。
-        // 特殊牌型均自带番种，不会进入此分支。
-        if (!huResult.special && total === 0) {
-            fanList = [{ name: '无番和', fan: 8 }];
-            total = 8;
-        }
-        _log('calculateFan decomp#' + i + ' afterExclusions(' + fanList.length + '): ' +
-             _fanListSummary(fanList) + ' | total=' + total);
+            // 无番和不是与其他番种并行匹配的普通番种，而是合法标准牌型
+            // 在所有番种及“不计”规则处理完毕后仍为 0 番时的兜底番种。
+            if (!shape.special && total === 0) {
+                fanList = [{ name: '无番和', fan: 8 }];
+                total = 8;
+            }
 
-        if (!best || total > best.totalFan) {
-            best = { totalFan: total, fanList: fanList };
-            _log('calculateFan decomp#' + i + ' -> new best (total=' + total + ')');
+            var candidate = {
+                index: candidates.length,
+                shapeIndex: shapeIndex,
+                decompositionIndex: i,
+                pattern: shape.pattern,
+                pair: decomps[i].pair || shape.zhlPair || null,
+                totalFan: total,
+                fanList: fanList
+            };
+            candidates.push(candidate);
+            _log('calculateFan candidate#' + candidate.index + ' afterExclusions(' + fanList.length + '): ' +
+                 _fanListSummary(fanList) + ' | total=' + total);
+
+            if (!best || total > best.totalFan) {
+                best = candidate;
+                _log('calculateFan candidate#' + candidate.index + ' -> new best (total=' + total + ')');
+            }
         }
     }
 
@@ -906,9 +933,41 @@ function calculateFan(handCards, actionGroups, options, huResult) {
         _log('calculateFan return: no valid result');
         return { totalFan: 0, fanList: [] };
     }
+    var alternatives = candidates.filter(function (candidate) {
+        return candidate.index !== best.index;
+    }).map(function (candidate) {
+        return {
+            index: candidate.index,
+            shapeIndex: candidate.shapeIndex,
+            decompositionIndex: candidate.decompositionIndex,
+            pattern: candidate.pattern,
+            pair: candidate.pair,
+            totalFan: candidate.totalFan,
+            fanList: candidate.fanList,
+            reason: candidate.totalFan < best.totalFan ? 'LOWER_TOTAL_FAN' : 'TIE_BREAK'
+        };
+    });
+
     _log('calculateFan return: totalFan=' + best.totalFan +
          ', fanList=[' + _fanListSummary(best.fanList) + ']');
-    return best;
+    return {
+        totalFan: best.totalFan,
+        fanList: best.fanList,
+        selectedCandidate: best,
+        alternatives: alternatives
+    };
+}
+
+function getScoringCandidateKey(pattern, allSets) {
+    var sets = allSets.filter(function (set) { return set.kind !== 'special'; }).map(function (set) {
+        return [
+            set.kind,
+            set.concealed ? '1' : '0',
+            set.isKong ? '1' : '0',
+            set.tiles.slice().sort().join(',')
+        ].join(':');
+    }).sort();
+    return pattern + '|' + sets.join('|');
 }
 
 function collectMatchedFans(allSets, handCards, actionGroups, options, huResult) {

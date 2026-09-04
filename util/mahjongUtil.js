@@ -188,7 +188,7 @@ function checkHu(handCards, actionGroups) {
         }
     }
 
-    // 仅无操作组时可胡特殊牌型
+    // 除组合龙可带一副普通面子外，其余特殊牌型均要求无操作组。
     if (actionGroups.length === 0) {
         if (checkShiSanYao(handCards)) {
             _log('checkHu OK: 十三幺');
@@ -206,14 +206,22 @@ function checkHu(handCards, actionGroups) {
             _log('checkHu OK: 全不靠');
             return { canHu: true, pattern: '全不靠', special: '全不靠' };
         }
-        var zhl = checkZuHeLongPattern(handCards);
-        if (zhl) {
-            _log('checkHu OK: 组合龙, pair=' + zhl.pair);
-            return { canHu: true, pattern: '组合龙', special: '组合龙', zhlPair: zhl.pair };
-        }
         _log('checkHu: 特殊牌型均不匹配，尝试标准拆牌');
     } else {
         _log('checkHu: 含操作组(' + actionGroups.length + ')，跳过特殊牌型，直接标准拆牌');
+    }
+
+    var zhl = checkZuHeLongPattern(handCards, actionGroups);
+    if (zhl) {
+        _log('checkHu OK: 组合龙, pair=' + zhl.pair);
+        return {
+            canHu: true,
+            pattern: '组合龙',
+            special: '组合龙',
+            zhlPair: zhl.pair,
+            zhlFace: zhl.face,
+            zhlKnitted: zhl.knitted
+        };
     }
 
     // 标准胡牌（4 面子 + 1 将）
@@ -255,9 +263,12 @@ function checkQiDuiPattern(cards) {
     if (cards.length !== 14) return false;
     var count = {};
     cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
-    if (Object.keys(count).length !== 7) return false;
-    for (var k in count) if (count[k] !== 2) return false;
-    return true;
+    var pairCount = 0;
+    for (var k in count) {
+        if (count[k] !== 2 && count[k] !== 4) return false;
+        pairCount += count[k] / 2;
+    }
+    return pairCount === 7;
 }
 
 // 生成全不靠使用的6种组合龙骨架：147、258、369三组分别对应不同花色。
@@ -319,105 +330,68 @@ function checkQuanBuKao(cards) {
 }
 
 // --- 组合龙 ---
-// 14 张牌 = 2 张同种将 + 12 张数牌
-// 其中 9 张组成组合龙（[1,2,3]/[4,5,6]/[7,8,9] 三组跨花色顺子，每组 3 数字分属 3 花色）
-// 另 3 张组成 1 个普通面子（同花色刻子或顺子）
-function checkZuHeLongPattern(cards) {
-    if (cards.length !== 14) return null;
+// 固定花色的147、258、369共9张，加一副普通面子和一对将；普通面子可副露。
+function checkZuHeLongPattern(cards, actionGroups) {
+    actionGroups = actionGroups || [];
+    if (actionGroups.length > 1) return null;
+    if (cards.length !== (actionGroups.length === 1 ? 11 : 14)) return null;
     var count = {};
     cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
 
-    var pairNames = [];
-    for (var n in count) if (count[n] >= 2) pairNames.push(n);
-
-    for (var pi = 0; pi < pairNames.length; pi++) {
-        var pair = pairNames[pi];
+    var universes = getKnittedUniverses();
+    for (var u = 0; u < universes.length; u++) {
         var rem = {};
-        for (var k in count) rem[k] = count[k];
-        rem[pair] -= 2;
+        for (var name in count) rem[name] = count[name];
+        var knitted = Object.keys(universes[u]);
+        var fits = knitted.every(function (name) {
+            if (!rem[name]) return false;
+            rem[name]--;
+            return true;
+        });
+        if (!fits) continue;
 
-        // 剩余 12 张必须全部为数牌
-        var remTiles = [];
-        var hasZi = false;
-        for (var name in rem) {
-            if (rem[name] <= 0) continue;
-            var p = parseName(name);
-            if (!p) { hasZi = true; break; }
-            for (var i = 0; i < rem[name]; i++) {
-                remTiles.push({ name: name, suit: p.suit, value: p.value });
-            }
+        var remaining = [];
+        for (var remName in rem) {
+            for (var r = 0; r < rem[remName]; r++) remaining.push(remName);
         }
-        if (hasZi) continue;
-        if (remTiles.length !== 12) continue;
+        if (actionGroups.length === 1) {
+            if (remaining.length === 2 && remaining[0] === remaining[1]) {
+                return { pair: remaining[0], face: null, knitted: knitted };
+            }
+            continue;
+        }
 
-        // 从 12 张中选 3 张作面子，剩 9 张检查组合龙
-        if (tryZuHeLongWithFace(remTiles)) {
-            return { pair: pair };
+        var completion = findPairAndFace(remaining);
+        if (completion) {
+            return { pair: completion.pair, face: completion.face, knitted: knitted };
         }
     }
     return null;
 }
 
-// 遍历 12 张中任选 3 张作面子的组合，剩余 9 张检查组合龙
-function tryZuHeLongWithFace(tiles) {
-    var n = tiles.length;
-    for (var i = 0; i < n - 2; i++) {
-        for (var j = i + 1; j < n - 1; j++) {
-            for (var k = j + 1; k < n; k++) {
-                var face = [tiles[i], tiles[j], tiles[k]];
-                if (!isValidFaceTiles(face)) continue;
-                var rest = [];
-                for (var t = 0; t < n; t++) {
-                    if (t !== i && t !== j && t !== k) rest.push(tiles[t]);
-                }
-                var bySuit = { '万': [], '条': [], '筒': [] };
-                for (var r = 0; r < rest.length; r++) {
-                    bySuit[rest[r].suit].push(rest[r].value);
-                }
-                if (canFormZuHeLong9(bySuit)) return true;
-            }
-        }
+function findPairAndFace(names) {
+    if (names.length !== 5) return null;
+    var count = {};
+    names.forEach(function (name) { count[name] = (count[name] || 0) + 1; });
+    for (var pair in count) {
+        if (count[pair] < 2) continue;
+        var rest = names.slice();
+        rest.splice(rest.indexOf(pair), 1);
+        rest.splice(rest.indexOf(pair), 1);
+        var faceType = getFaceType(rest);
+        if (faceType) return { pair: pair, face: { type: faceType, tiles: rest } };
     }
-    return false;
+    return null;
 }
 
-// 3 张同花色牌能否组成刻子或顺子
-function isValidFaceTiles(tiles) {
-    if (tiles.length !== 3) return false;
-    if (tiles[0].suit !== tiles[1].suit || tiles[1].suit !== tiles[2].suit) return false;
-    var vals = [tiles[0].value, tiles[1].value, tiles[2].value]
-        .sort(function (a, b) { return a - b; });
-    if (vals[0] === vals[1] && vals[1] === vals[2]) return true;          // 刻子
-    if (vals[1] === vals[0] + 1 && vals[2] === vals[1] + 1) return true;  // 顺子
-    return false;
-}
-
-// 9 张数牌能否组成固定花色的147、258、369三组组合龙骨架。
-function canFormZuHeLong9(bySuit) {
-    if (bySuit.万.length !== 3 || bySuit.条.length !== 3 || bySuit.筒.length !== 3) return false;
-    var names = [];
-    var seen = {};
-    ['万', '条', '筒'].forEach(function (suit) {
-        bySuit[suit].forEach(function (value) {
-            var name = value + suit;
-            names.push(name);
-            seen[name] = (seen[name] || 0) + 1;
-        });
-    });
-    if (Object.keys(seen).length !== 9) return false;
-
-    var universes = getKnittedUniverses();
-    for (var u = 0; u < universes.length; u++) {
-        var valid = true;
-        for (var i = 0; i < names.length; i++) {
-            if (!universes[u][names[i]]) {
-                valid = false;
-                break;
-            }
-        }
-        if (valid) return true;
-    }
-    return false;
+function getFaceType(names) {
+    if (names.length !== 3) return null;
+    if (names[0] === names[1] && names[1] === names[2]) return 'kezi';
+    var parsed = names.map(parseName);
+    if (parsed.some(function (item) { return !item; })) return null;
+    if (parsed[0].suit !== parsed[1].suit || parsed[1].suit !== parsed[2].suit) return null;
+    var values = parsed.map(function (item) { return item.value; }).sort(function (a, b) { return a - b; });
+    return values[1] === values[0] + 1 && values[2] === values[1] + 1 ? 'shunzi' : null;
 }
 
 function permutations(arr) {
@@ -586,7 +560,7 @@ function analyzeDecomposition(decomp, actionGroups, options) {
 }
 
 // 特殊牌型 allSets 构造
-function analyzeSpecial(special, handCards, actionGroups, huResult) {
+function analyzeSpecial(special, handCards, actionGroups, huResult, options) {
     var allSets = [];
     var count = {};
     handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
@@ -619,11 +593,13 @@ function analyzeSpecial(special, handCards, actionGroups, huResult) {
     if (special === '七对') {
         for (var n3 in count) {
             var p3 = parseName(n3);
-            allSets.push({
-                kind: 'pair', concealed: true, isKong: false,
-                tiles: [n3, n3], name: n3,
-                suit: p3 ? p3.suit : '字', start: p3 ? p3.value : null
-            });
+            for (var pairIndex = 0; pairIndex < count[n3] / 2; pairIndex++) {
+                allSets.push({
+                    kind: 'pair', concealed: true, isKong: false,
+                    tiles: [n3, n3], name: n3,
+                    suit: p3 ? p3.suit : '字', start: p3 ? p3.value : null
+                });
+            }
         }
         allSets.push({ kind: 'special', special: '七对', tiles: [],
                        concealed: true, isKong: false, name: '', suit: '', start: null });
@@ -645,25 +621,19 @@ function analyzeSpecial(special, handCards, actionGroups, huResult) {
     }
 
     if (special === '组合龙') {
-        var zhlPair = huResult.zhlPair;
-        var zp = parseName(zhlPair);
-        allSets.push({
-            kind: 'jiang', concealed: true, isKong: false,
-            tiles: [zhlPair, zhlPair], name: zhlPair,
-            suit: zp ? zp.suit : '字', start: zp ? zp.value : null
+        var concealedSets = huResult.zhlFace ? [huResult.zhlFace] : [];
+        allSets = analyzeDecomposition({
+            pair: huResult.zhlPair,
+            concealedSets: concealedSets
+        }, actionGroups, options);
+        (huResult.zhlKnitted || []).forEach(function (name) {
+            var parsed = parseName(name);
+            allSets.push({
+                kind: 'single', concealed: true, isKong: false,
+                tiles: [name], name: name,
+                suit: parsed.suit, start: parsed.value
+            });
         });
-        // 12 张数牌按花色分组成 3 个跨花色顺子（这里只标 single，fan 检查时由 special 标识判定）
-        for (var n5 in count) {
-            if (n5 === zhlPair) continue;
-            var p5 = parseName(n5);
-            for (var i = 0; i < count[n5]; i++) {
-                allSets.push({
-                    kind: 'single', concealed: true, isKong: false,
-                    tiles: [n5], name: n5,
-                    suit: p5 ? p5.suit : '字', start: p5 ? p5.value : null
-                });
-            }
-        }
         allSets.push({ kind: 'special', special: '组合龙', tiles: [],
                        concealed: true, isKong: false, name: '', suit: '', start: null });
         return allSets;
@@ -903,7 +873,7 @@ function calculateFan(handCards, actionGroups, options, huResult) {
 
     for (var i = 0; i < decomps.length; i++) {
         var allSets = huResult.special
-            ? analyzeSpecial(huResult.special, handCards, actionGroups, huResult)
+            ? analyzeSpecial(huResult.special, handCards, actionGroups, huResult, scoringOptions)
             : analyzeDecomposition(decomps[i], actionGroups, scoringOptions);
 
         _log('calculateFan decomp#' + i + ': pair=' + (decomps[i].pair || (huResult.zhlPair || '-')) +
@@ -1751,11 +1721,14 @@ function fanMenQianQing(allSets, handCards, actionGroups) {
 }
 
 // 平和：4副顺子及序数牌作将；允许副露，边、坎、钓不影响成立。
-function fanPingHe(allSets) {
+function fanPingHe(allSets, handCards, actionGroups, options, huResult) {
     var cnt = countSets(allSets);
-    if (cnt.shunzi !== 4) return false;
     var jiang = allSets.filter(function (s) { return s.kind === 'jiang'; });
     if (jiang.length !== 1) return false;
+    if (huResult && huResult.special === '组合龙') {
+        return cnt.shunzi === 1 && !!parseName(jiang[0].name);
+    }
+    if (cnt.shunzi !== 4) return false;
     return !!parseName(jiang[0].name);
 }
 

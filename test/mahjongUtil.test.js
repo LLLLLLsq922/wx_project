@@ -129,6 +129,21 @@ test('七对自摸计不求人，且不重复计算门前清、单钓将和自�
     assertNotHasFan(result, '自摸');
 });
 
+test('七对允许四张同牌作为两对并加计四归一', function () {
+    var result = calculate([
+        '1万', '1万', '1万', '1万',
+        '2万', '2万',
+        '3条', '3条',
+        '4条', '4条',
+        '5筒', '5筒',
+        '东', '东'
+    ], { winTile: '东' });
+
+    assert.equal(result.pattern, '七对');
+    assertHasFan(result, '七对', 24);
+    assertHasFan(result, '四归一', 2);
+});
+
 test('七星不靠按组合龙骨架识别为24番', function () {
     var result = calculate([
         '1万', '4万', '7万',
@@ -203,6 +218,30 @@ test('组合龙要求147、258、369三组分别固定花色', function () {
         '东', '东'
     ], { winTile: '东' });
     assertNotHasFan(invalid, '组合龙');
+});
+
+test('组合龙允许字牌刻子或一副副露，并识别相应叠加番种', function () {
+    var honorPung = calculate([
+        '1万', '4万', '7万',
+        '2条', '5条', '8条',
+        '3筒', '6筒', '9筒',
+        '中', '中', '中',
+        '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(honorPung, '组合龙', 12);
+    assertHasFan(honorPung, '箭刻', 2);
+    assertHasFan(honorPung, '五门齐', 6);
+
+    var exposedChow = calculate([
+        '1万', '4万', '7万',
+        '2条', '5条', '8条',
+        '3筒', '6筒', '9筒',
+        '5万', '5万'
+    ], { winTile: '5万' }, [
+        group('吃', ['1筒', '2筒', '3筒'])
+    ]);
+    assertHasFan(exposedChow, '组合龙', 12);
+    assertHasFan(exposedChow, '平和', 2);
 });
 
 test('平和允许副露并允许顺子和将牌包含幺九数牌', function () {

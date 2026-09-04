@@ -1,0 +1,1193 @@
+/* subpackages/guobiao/pages/calc/calc.wxss */
+.container {
+    padding: 20rpx;
+    background-color: #f5f5f5;
+    min-height: 100vh;
+    padding-bottom: 300rpx;
+  }
+  
+  .section {
+    margin-bottom: 20rpx;
+  }
+  
+  .card {
+    background: white;
+    border-radius: 15rpx;
+    padding: 30rpx;
+    box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  }
+  
+  .section-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    margin-bottom: 20rpx;
+    display: block;
+    color: #333;
+  }
+  
+  /* 手牌显示区域 */
+  .cards-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15rpx;
+    min-height: 120rpx;
+    align-items: center;
+    padding: 10rpx;
+  }
+  
+  .card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    transition: all 0.3s;
+  }
+  
+  .card-item:active {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+  
+  .card-image {
+    width: 60rpx;
+    height: 80rpx;
+    border: 2rpx solid #ddd;
+    border-radius: 8rpx;
+    box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
+    background-color: #f8f9fa;
+  }
+  
+  .card-image.small {
+    width: 40rpx;
+    height: 60rpx;
+  }
+  
+  .card-name {
+    font-size: 20rpx;
+    color: #666;
+  }
+  
+  .empty-placeholder {
+    text-align: center;
+    color: #999;
+    font-size: 28rpx;
+    width: 100%;
+    padding: 40rpx 0;
+  }
+  
+  /* 操作牌组样式 */
+  .action-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+  
+  .action-group {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 15rpx;
+    background: #f8f9fa;
+    border-radius: 8rpx;
+    border-left: 4rpx solid #07c160;
+  }
+  
+  .action-type {
+    font-size: 28rpx;
+    color: #07c160;
+    font-weight: bold;
+    min-width: 80rpx;
+  }
+  
+  .group-cards {
+    display: flex;
+    gap: 8rpx;
+    flex-wrap: wrap;
+  }
+  
+  .group-card-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  /* 操作模式按钮 - 优化为紧凑一行显示 */
+  .mode-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8rpx;
+    margin-bottom: 15rpx;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .mode-btn {
+    flex: 1;
+    min-width: 0;
+    font-size: 20rpx;
+    padding: 12rpx 8rpx;
+    background: #f8f9fa;
+    border: 2rpx solid #e9ecef;
+    border-radius: 6rpx;
+    text-align: center;
+    transition: all 0.3s;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .mode-btn.active {
+    background-color: #07c160;
+    color: white;
+    border-color: #07c160;
+    transform: translateY(-2rpx);
+    box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.3);
+  }
+  
+  .mode-hint {
+    font-size: 22rpx;
+    color: #ff6b35;
+    background: #fff2e8;
+    padding: 12rpx 15rpx;
+    border-radius: 6rpx;
+    border-left: 4rpx solid #ff6b35;
+    margin-top: 15rpx;
+    line-height: 1.4;
+  }
+  
+  /* 麻将牌选择区 - 优化为紧凑一行显示9张牌 */
+  .card-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 25rpx;
+  }
+  
+  .card-category {
+    margin-bottom: 8rpx;
+  }
+  
+  .category-title {
+    font-size: 26rpx;
+    font-weight: bold;
+    color: #666;
+    margin-bottom: 12rpx;
+    display: block;
+    padding-bottom: 8rpx;
+    border-bottom: 1rpx solid #f0f0f0;
+  }
+  
+  .card-buttons {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6rpx;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8rpx 0;
+  }
+  
+  .card-btn-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .card-btn-container:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  .card-btn {
+    width: 52rpx;
+    height: 70rpx;
+    border: 2rpx solid #ddd;
+    border-radius: 6rpx;
+    box-shadow: 0 2rpx 6rpx rgba(0,0,0,0.1);
+    background-color: white;
+  }
+  
+  .card-btn-text {
+    font-size: 16rpx;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60rpx;
+    text-align: center;
+  }
+  
+  /* 特殊规则选择 - 2行3列网格布局,完整显示每个选项 */
+  .special-rules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+    padding: 8rpx 0;
+  }
+  
+  .rule-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    flex: 0 0 calc((100% - 32rpx) / 3);
+    padding: 18rpx 0;
+    background: #f8f8f8;
+    border-radius: 10rpx;
+    box-sizing: border-box;
+    font-size: 26rpx;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  
+  .rule-item:active {
+    background: #e8e8e8;
+  }
+  
+  .rule-text {
+    color: #333;
+    font-size: 26rpx;
+    white-space: nowrap;
+  }
+  
+  /* 圈风风位选择 */
+  .wind-selection {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20rpx;
+  }
+  
+  .wind-item {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+    flex: 1;
+  }
+  
+  .wind-item text {
+    font-size: 26rpx;
+    color: #666;
+    min-width: 70rpx;
+  }
+  
+  .picker {
+    flex: 1;
+    padding: 15rpx 20rpx;
+    border: 2rpx solid #e9ecef;
+    border-radius: 6rpx;
+    text-align: center;
+    font-size: 26rpx;
+    background: #f8f9fa;
+    color: #333;
+  }
+
+  /* 胡牌信息区域 */
+  .hu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20rpx;
+  }
+
+  .hu-info-row {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+  }
+
+  .hu-label {
+    font-size: 26rpx;
+    color: #666;
+    min-width: 130rpx;
+    flex-shrink: 0;
+  }
+
+  /* 胡的牌实时显示 */
+  .win-display {
+    flex: 1;
+    min-height: 80rpx;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+
+  /* 已满状态：胡牌图 + 结果并排 */
+  .win-display.winning {
+    align-items: flex-start;
+  }
+
+  .waiting-text {
+    font-size: 26rpx;
+    color: #999;
+  }
+
+  /* 听牌列表 */
+  .tingpai-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16rpx;
+  }
+
+  .tingpai-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+  }
+
+  .tingpai-tile {
+    width: 60rpx;
+    height: 86rpx;
+    border-radius: 6rpx;
+    border: 1rpx solid #e8e8e8;
+    background: #fff;
+  }
+
+  .tingpai-fan {
+    font-size: 22rpx;
+    color: #e8783a;
+    font-weight: bold;
+  }
+
+  .no-tingpai text {
+    font-size: 26rpx;
+    color: #999;
+  }
+
+  /* 已满时胡的牌 */
+  .winning-tile-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8rpx;
+    flex-shrink: 0;
+  }
+
+  .winning-tile {
+    width: 80rpx;
+    height: 112rpx;
+    border-radius: 8rpx;
+    border: 3rpx solid #07c160;
+    background: #fff;
+    box-shadow: 0 4rpx 12rpx rgba(7, 193, 96, 0.25);
+  }
+
+  .winning-label {
+    font-size: 22rpx;
+    color: #07c160;
+    font-weight: bold;
+  }
+
+  /* 胡牌结果内联展示 */
+  .hu-result {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12rpx;
+  }
+
+  .hu-result-header {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+  }
+
+  .hu-result-header.success .hu-status-text {
+    color: #07c160;
+    font-weight: bold;
+    font-size: 28rpx;
+  }
+
+  .hu-result-header.error .hu-status-text {
+    color: #e84c3d;
+    font-weight: bold;
+    font-size: 28rpx;
+  }
+
+  .hu-status-icon {
+    font-size: 30rpx;
+  }
+
+  .hu-status-text {
+    font-size: 28rpx;
+  }
+
+  /* 总番数大字号展示 */
+  .hu-total-fan {
+    display: flex;
+    align-items: baseline;
+    gap: 4rpx;
+  }
+
+  .hu-total-fan-num {
+    font-size: 52rpx;
+    font-weight: bold;
+    color: #e8783a;
+    line-height: 1;
+  }
+
+  .hu-total-fan-unit {
+    font-size: 26rpx;
+    color: #e8783a;
+    font-weight: bold;
+  }
+
+  /* 番型标签列表 */
+  .hu-fan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10rpx;
+  }
+
+  .hu-fan-tag {
+    display: flex;
+    align-items: center;
+    gap: 6rpx;
+    padding: 6rpx 14rpx;
+    background: linear-gradient(135deg, #fff4e6, #ffe8cc);
+    border: 1rpx solid #ffd8a8;
+    border-radius: 20rpx;
+  }
+
+  .hu-fan-name {
+    font-size: 22rpx;
+    color: #d9480f;
+    font-weight: 500;
+  }
+
+  .hu-fan-count {
+    font-size: 20rpx;
+    color: #fff;
+    background: #e8783a;
+    padding: 2rpx 8rpx;
+    border-radius: 10rpx;
+    font-weight: bold;
+  }
+
+  /* 不可胡牌提示 */
+  .hu-no-tip {
+    padding: 8rpx 0;
+  }
+
+  .hu-no-tip text {
+    font-size: 24rpx;
+    color: #999;
+  }
+  
+  /* 功能按钮 */
+  .action-buttons {
+    display: flex;
+    gap: 15rpx;
+    margin: 30rpx 0;
+  }
+  
+  .action-buttons .btn {
+    flex: 1;
+    padding: 20rpx;
+    font-size: 26rpx;
+    border: none;
+    border-radius: 8rpx;
+    font-weight: bold;
+    transition: all 0.3s;
+  }
+  
+  .action-buttons .btn:active {
+    transform: translateY(-2rpx);
+    opacity: 0.9;
+  }
+  
+  .calculate {
+    background: linear-gradient(135deg, #07c160, #05a050);
+    color: white;
+  }
+  
+  .clear {
+    background: linear-gradient(135deg, #ff6b35, #e55a2b);
+    color: white;
+  }
+  
+  .rules {
+    background: linear-gradient(135deg, #1989fa, #1675d1);
+    color: white;
+  }
+  
+  /* 结果显示 */
+  .result-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1rpx solid #e0e0e0;
+    box-shadow: 0 -2rpx 20rpx rgba(0,0,0,0.1);
+    z-index: 1000;
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25rpx;
+    border-bottom: 1rpx solid #f0f0f0;
+  }
+  
+  .result-title {
+    font-size: 32rpx;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .close-btn {
+    font-size: 36rpx;
+    color: #999;
+    width: 36rpx;
+    height: 36rpx;
+    text-align: center;
+    line-height: 32rpx;
+    border-radius: 50%;
+    background: #f5f5f5;
+  }
+  
+  .close-btn:active {
+    background: #e0e0e0;
+  }
+  
+  .result-content {
+    padding: 25rpx;
+    max-height: 350rpx;
+    overflow-y: auto;
+  }
+  
+  .result-content.success {
+    background: linear-gradient(135deg, #e8f8f0, #d1f0e0);
+    border-left: 8rpx solid #07c160;
+  }
+  
+  .result-content.error {
+    background: linear-gradient(135deg, #ffe8e6, #ffd1cc);
+    border-left: 8rpx solid #ff6b35;
+  }
+  
+  .hu-status {
+    display: flex;
+    align-items: center;
+    gap: 15rpx;
+    margin-bottom: 25rpx;
+  }
+  
+  .status-icon {
+    font-size: 36rpx;
+  }
+  
+  .status-text {
+    font-size: 28rpx;
+    font-weight: bold;
+  }
+  
+  .result-content.success .status-text {
+    color: #07c160;
+  }
+  
+  .result-content.error .status-text {
+    color: #ff6b35;
+  }
+  
+  .fan-summary {
+    margin-top: 15rpx;
+  }
+  
+  .total-fan {
+    font-size: 28rpx;
+    font-weight: bold;
+    color: #333;
+    display: block;
+    margin-bottom: 15rpx;
+    padding: 12rpx 0;
+    border-bottom: 2rpx solid rgba(0,0,0,0.1);
+  }
+  
+  .fan-list {
+    text-align: left;
+    background: rgba(255,255,255,0.7);
+    border-radius: 8rpx;
+    padding: 15rpx;
+  }
+  
+  .fan-item {
+    display: block;
+    font-size: 24rpx;
+    margin-bottom: 10rpx;
+    color: #666;
+    padding: 6rpx 0;
+    border-bottom: 1rpx solid #e9ecef;
+  }
+  
+  .fan-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+  
+  .no-hu-tip {
+    text-align: center;
+    font-size: 26rpx;
+    color: #666;
+    padding: 30rpx 0;
+  }
+  
+  /* 响应式设计 - 针对小屏幕进一步优化 */
+  @media (max-width: 750rpx) {
+    .container {
+      padding: 15rpx;
+    }
+    
+    .card {
+      padding: 20rpx;
+    }
+    
+    .section-title {
+      font-size: 28rpx;
+      margin-bottom: 15rpx;
+    }
+    
+    .wind-selection {
+      flex-direction: column;
+      gap: 15rpx;
+    }
+    
+    .wind-item {
+      justify-content: space-between;
+    }
+    
+    .action-buttons {
+      flex-direction: column;
+      gap: 12rpx;
+    }
+    
+    /* 进一步压缩元素尺寸 */
+    .mode-btn {
+      font-size: 18rpx;
+      padding: 10rpx 6rpx;
+      gap: 4rpx;
+    }
+    
+    .card-btn {
+      width: 48rpx;
+      height: 65rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 14rpx;
+      max-width: 50rpx;
+    }
+    
+    .rule-item {
+      font-size: 24rpx;
+      gap: 6rpx;
+      padding: 16rpx 0;
+    }
+    
+    .rule-text {
+      font-size: 24rpx;
+    }
+    
+    .mode-hint {
+      font-size: 20rpx;
+      padding: 10rpx 12rpx;
+    }
+    
+    .action-buttons .btn {
+      font-size: 24rpx;
+      padding: 18rpx;
+    }
+  }
+  
+  /* 针对超小屏幕的额外优化 */
+  @media (max-width: 600rpx) {
+    .mode-btn {
+      font-size: 16rpx;
+      padding: 8rpx 4rpx;
+    }
+    
+    .card-btn {
+      width: 44rpx;
+      height: 60rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 12rpx;
+    }
+    
+    .rule-item {
+      font-size: 22rpx;
+      padding: 14rpx 0;
+    }
+    
+    .rule-text {
+      font-size: 22rpx;
+    }
+  }
+  
+  /* 确保在标准屏幕上也能正常显示 */
+  @media (min-width: 751rpx) and (max-width: 1000rpx) {
+    .mode-btn {
+      font-size: 22rpx;
+      padding: 14rpx 10rpx;
+    }
+    
+    .card-btn {
+      width: 56rpx;
+      height: 75rpx;
+    }
+    
+    .card-btn-text {
+      font-size: 18rpx;
+    }
+    
+    .rule-item {
+      font-size: 24rpx;
+    }
+    
+    .rule-text {
+      font-size: 24rpx;
+    }
+  }
+
+/* 手机端紧凑布局：覆盖上方历史样式，确保首屏优先展示手牌与胡牌信息 */
+.container {
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  padding: 12rpx;
+  padding-bottom: 40rpx;
+}
+
+.container view,
+.container label,
+.container picker,
+.container button {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.section {
+  margin-bottom: 12rpx;
+}
+
+.card {
+  padding: 16rpx;
+  border-radius: 18rpx;
+  box-shadow: 0 3rpx 14rpx rgba(34, 54, 44, 0.06);
+}
+
+.section-title {
+  margin-bottom: 10rpx;
+  font-size: 27rpx;
+  line-height: 1.35;
+}
+
+.hand-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.hand-section-heading .section-title {
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.gang-count-hint {
+  flex-shrink: 0;
+  padding: 4rpx 9rpx;
+  color: #b05b00;
+  font-size: 18rpx;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: nowrap;
+  border: 1rpx solid #ffd08a;
+  border-radius: 16rpx;
+  background: #fff7e8;
+}
+
+/* 牌库保持每门一行，九张牌均分可用宽度 */
+.card-selector,
+.card-category {
+  gap: 0;
+  margin: 0;
+}
+
+.card-buttons {
+  justify-content: center;
+  gap: 2rpx;
+  padding: 1rpx 0;
+}
+
+.card-btn-container {
+  flex: 0 0 62rpx;
+  min-width: 0;
+  padding: 2rpx 0;
+  border-radius: 8rpx;
+  transform-origin: center;
+  transition: transform 100ms ease-out, opacity 100ms ease-out,
+              background-color 100ms ease-out;
+}
+
+.tile-button-pressed {
+  transform: scale(0.86) translateY(3rpx);
+  opacity: 0.72;
+  background: rgba(7, 193, 96, 0.12);
+}
+
+.card-btn {
+  width: 100%;
+  max-width: 62rpx;
+  height: 93rpx;
+  border-width: 1rpx;
+  border-radius: 5rpx;
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 14张手牌尽量在一行完整呈现 */
+.cards-display {
+  gap: 0;
+  min-height: 77rpx;
+  padding: 0;
+  align-items: flex-start;
+}
+
+.card-item {
+  flex: 0 0 50rpx;
+  min-width: 0;
+  gap: 2rpx;
+}
+
+.card-image {
+  width: 100%;
+  height: 75rpx;
+  border-width: 1rpx;
+  border-radius: 5rpx;
+  box-shadow: 0 2rpx 5rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-name {
+  display: none;
+}
+
+.empty-placeholder {
+  padding: 16rpx 0;
+  font-size: 24rpx;
+}
+
+.hand-card {
+  padding-left: 8rpx;
+  padding-right: 8rpx;
+}
+
+/* 操作区压缩成一行工具条 */
+.mode-buttons {
+  gap: 6rpx;
+  margin-bottom: 0;
+}
+
+.mode-btn {
+  padding: 9rpx 4rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  border-radius: 9rpx;
+}
+
+.mode-hint {
+  margin-top: 8rpx;
+  padding: 7rpx 10rpx;
+  font-size: 20rpx;
+}
+
+.action-groups {
+  gap: 8rpx;
+}
+
+.action-group {
+  gap: 10rpx;
+  padding: 8rpx 10rpx;
+}
+
+.action-type {
+  min-width: 62rpx;
+  font-size: 23rpx;
+}
+
+.group-cards {
+  gap: 4rpx;
+}
+
+.card-image.small {
+  width: 36rpx;
+  height: 52rpx;
+}
+
+/* 已完成的吃碰杠直接嵌入当前手牌，并用成组色块与角标区分 */
+.meld-group {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  min-width: 0;
+  padding: 18rpx 2rpx 3rpx;
+  border: 2rpx solid #cfd8d3;
+  border-radius: 8rpx;
+  background: #f5f8f6;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
+}
+
+.meld-group:active {
+  transform: scale(0.96);
+  opacity: 0.78;
+}
+
+.meld-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18rpx;
+  color: #fff;
+  font-size: 15rpx;
+  font-weight: 600;
+  line-height: 18rpx;
+  text-align: center;
+  border-radius: 5rpx 5rpx 0 0;
+  background: #708078;
+}
+
+.meld-tiles {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.meld-tile {
+  width: 46rpx;
+  height: 69rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.1);
+  border-radius: 4rpx;
+  background: #fff;
+}
+
+.meld-chi {
+  border-color: #76d7a2;
+  background: #edf9f2;
+}
+
+.meld-chi .meld-badge {
+  background: #07a854;
+}
+
+.meld-peng {
+  border-color: #82baf3;
+  background: #edf5fe;
+}
+
+.meld-peng .meld-badge {
+  background: #1989fa;
+}
+
+.meld-minggang {
+  border-color: #ffc66b;
+  background: #fff8e8;
+}
+
+.meld-minggang .meld-badge {
+  background: #e89000;
+}
+
+.meld-angang {
+  border-color: #b69aeb;
+  background: #f6f1ff;
+}
+
+.meld-angang .meld-badge {
+  background: #7651c9;
+}
+
+/* 胡牌信息卡保持矮而醒目 */
+.hu-info,
+.hu-result {
+  gap: 7rpx;
+}
+
+.hu-info-row {
+  align-items: flex-start;
+  gap: 10rpx;
+}
+
+.hu-label {
+  min-width: 96rpx;
+  font-size: 23rpx;
+}
+
+.win-display {
+  min-height: 62rpx;
+  gap: 10rpx;
+}
+
+.waiting-text,
+.no-tingpai text {
+  font-size: 23rpx;
+}
+
+.tingpai-list {
+  gap: 2rpx;
+}
+
+.tingpai-tile {
+  width: 58rpx;
+  height: 87rpx;
+}
+
+.tingpai-fan {
+  font-size: 18rpx;
+}
+
+.winning-tile-wrap {
+  gap: 3rpx;
+}
+
+.winning-tile {
+  width: 70rpx;
+  height: 105rpx;
+  border-width: 2rpx;
+}
+
+.winning-label {
+  font-size: 18rpx;
+}
+
+.hu-result-header.success .hu-status-text,
+.hu-result-header.error .hu-status-text,
+.hu-status-text {
+  font-size: 24rpx;
+}
+
+.hu-status-icon {
+  font-size: 25rpx;
+}
+
+.hu-total-fan-num {
+  font-size: 40rpx;
+}
+
+.hu-total-fan-unit {
+  font-size: 22rpx;
+}
+
+.hu-fan-list {
+  gap: 6rpx;
+}
+
+.hu-fan-tag {
+  gap: 4rpx;
+  padding: 4rpx 9rpx;
+}
+
+.hu-fan-name {
+  font-size: 19rpx;
+}
+
+.hu-fan-count {
+  padding: 1rpx 6rpx;
+  font-size: 17rpx;
+}
+
+.hu-no-tip {
+  padding: 3rpx 0;
+}
+
+.hu-no-tip text {
+  font-size: 21rpx;
+}
+
+/* 次要规则与风位合并成一张紧凑设置卡 */
+.compact-settings .section-title {
+  margin-bottom: 8rpx;
+}
+
+.special-rules {
+  gap: 8rpx;
+  padding: 0;
+}
+
+.rule-item {
+  flex-basis: calc(33.333% - 6rpx);
+  gap: 4rpx;
+  padding: 9rpx 2rpx;
+  font-size: 21rpx;
+  border-radius: 8rpx;
+}
+
+.rule-text {
+  font-size: 21rpx;
+}
+
+checkbox .wx-checkbox-input {
+  width: 28rpx;
+  height: 28rpx;
+  margin: 0;
+}
+
+.settings-divider {
+  height: 1rpx;
+  margin: 12rpx 0;
+  background: #eef1ef;
+}
+
+.wind-selection {
+  flex-direction: row;
+  gap: 12rpx;
+}
+
+.wind-item {
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.wind-item text {
+  min-width: 48rpx;
+  font-size: 22rpx;
+}
+
+.wind-item picker {
+  flex: 1;
+}
+
+.picker {
+  padding: 8rpx 10rpx;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+}
+
+.action-buttons {
+  flex-direction: row;
+  gap: 10rpx;
+  margin: 16rpx 0;
+}
+
+.action-buttons .btn {
+  padding: 13rpx 8rpx;
+  font-size: 23rpx;
+  line-height: 1.5;
+}

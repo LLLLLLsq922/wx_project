@@ -19,7 +19,7 @@ test('规则页不再使用横向滚动筛选器', function () {
 });
 
 test('首页将胡牌信息排列在特殊规则和风位设置之前', function () {
-    var wxml = read('pages/index/index.wxml');
+    var wxml = read('subpackages/guobiao/pages/calc/calc.wxml');
     var huInfoIndex = wxml.indexOf('>胡牌信息<');
     var specialRulesIndex = wxml.indexOf('>特殊规则<');
     var windIndex = wxml.indexOf('>圈风<');
@@ -30,14 +30,14 @@ test('首页将胡牌信息排列在特殊规则和风位设置之前', function
 });
 
 test('四组牌库按钮均启用按压动画反馈', function () {
-    var wxml = read('pages/index/index.wxml');
+    var wxml = read('subpackages/guobiao/pages/calc/calc.wxml');
     var matches = wxml.match(/hover-class="tile-button-pressed"/g) || [];
 
     assert.equal(matches.length, 4);
 });
 
 test('吃碰杠牌组嵌入当前手牌，并使用类型角标区分', function () {
-    var wxml = read('pages/index/index.wxml');
+    var wxml = read('subpackages/guobiao/pages/calc/calc.wxml');
     var currentHandIndex = wxml.indexOf('>当前手牌（');
     var meldIndex = wxml.indexOf('class="meld-group');
     var huInfoIndex = wxml.indexOf('>胡牌信息<');
@@ -50,7 +50,7 @@ test('吃碰杠牌组嵌入当前手牌，并使用类型角标区分', function
 });
 
 test('当前手牌上限随杠牌组数增加，并显示补牌数量提示', function () {
-    var wxml = read('pages/index/index.wxml');
+    var wxml = read('subpackages/guobiao/pages/calc/calc.wxml');
 
     assert.match(wxml, /function gangCount\(actionGroups\)/);
     assert.match(wxml, /return 14 \+ gangCount\(actionGroups\)/);
@@ -59,7 +59,7 @@ test('当前手牌上限随杠牌组数增加，并显示补牌数量提示', fu
 });
 
 test('手机端牌图使用放大后的紧凑尺寸', function () {
-    var wxss = read('pages/index/index.wxss');
+    var wxss = read('subpackages/guobiao/pages/calc/calc.wxss');
 
     assert.match(wxss, /\.card-btn\s*\{[^}]*max-width:\s*62rpx[^}]*height:\s*93rpx/s);
     assert.match(wxss, /\.card-item\s*\{[^}]*flex:\s*0 0 50rpx/s);

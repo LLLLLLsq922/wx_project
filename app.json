@@ -4,10 +4,19 @@
       "pages/rules/rules",
       "pages/rules-detail/rules-detail"
     ],
+    "subpackages": [
+      {
+        "root": "subpackages/guobiao",
+        "name": "guobiao",
+        "pages": [
+          "pages/calc/calc"
+        ]
+      }
+    ],
     "window": {
       "backgroundTextStyle": "light",
       "navigationBarBackgroundColor": "#07c160",
-      "navigationBarTitleText": "国标麻将胡牌计算器",
+      "navigationBarTitleText": "麻将助手",
       "navigationBarTextStyle": "white",
       "enablePullDownRefresh": false
     },
@@ -19,7 +28,7 @@
       "list": [
         {
           "pagePath": "pages/index/index",
-          "text": "胡牌计算",
+          "text": "首页",
           "iconPath": "images/tabs/calc.png",
           "selectedIconPath": "images/tabs/calc-active.png"
         },
@@ -35,4 +44,3 @@
     "sitemapLocation": "sitemap.json",
     "lazyCodeLoading": "requiredComponents"
   }
-  

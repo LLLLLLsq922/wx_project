@@ -10,7 +10,7 @@ global.Page = function (definition) {
     pageDefinition = definition;
 };
 
-require('../pages/index/index.js');
+require('../subpackages/guobiao/pages/calc/calc.js');
 
 function invokeGoToRules(data) {
     var calls = [];

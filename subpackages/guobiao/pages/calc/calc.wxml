@@ -1,0 +1,255 @@
+<!--subpackages/guobiao/pages/calc/calc.wxml-->
+<wxs module="tiles">
+function totalTiles(handCards, actionGroups) {
+    var count = handCards.length;
+    for (var i = 0; i < actionGroups.length; i++) {
+        count += actionGroups[i].cards.length;
+    }
+    return count;
+}
+function gangCount(actionGroups) {
+    var count = 0;
+    for (var i = 0; i < actionGroups.length; i++) {
+        if (actionGroups[i].type === '明杠' || actionGroups[i].type === '暗杠') {
+            count++;
+        }
+    }
+    return count;
+}
+function targetTiles(actionGroups) {
+    return 14 + gangCount(actionGroups);
+}
+module.exports.totalTiles = totalTiles;
+module.exports.gangCount = gangCount;
+module.exports.targetTiles = targetTiles;
+</wxs>
+<view class="container">
+    <!-- 麻将牌选择区 -->
+    <view class="section card">
+    <text class="section-title">麻将牌</text>
+        <view class="card-selector"> 
+            <view class="card-category">
+                <view class="card-buttons">
+                <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '万'}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
+                    <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
+                    </view>
+                </block>
+                </view>
+        
+                <view class="card-buttons">
+                <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '条'}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
+                    <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
+                    </view>
+                </block>
+                </view>
+
+                <view class="card-buttons">
+                <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '筒'}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
+                    <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
+                    </view>
+                </block>
+                </view>
+
+                <view class="card-buttons">
+                <block wx:for="{{allCards}}" wx:key="id" wx:if="{{item.type === '字'}}">
+                    <view class="card-btn-container" hover-class="tile-button-pressed" hover-start-time="0" hover-stay-time="90" bindtap="selectCard" data-card="{{item}}">
+                    <image class="card-btn" src="{{item.image}}" mode="aspectFit" />
+                    </view>
+                </block>
+                </view>
+            </view>
+        </view>
+    </view>
+    
+    <!-- 操作模式选择 -->
+    <view class="section card">
+    <text class="section-title">操作模式</text>
+        <view class="mode-buttons">
+        <block wx:for="{{actionModes}}" wx:key="value">
+            <view class="mode-btn {{currentMode === item.value ? 'active' : ''}}" bindtap="changeMode" data-mode="{{item.value}}"> 
+            {{item.name}}
+            </view>
+        </block>
+        </view>
+        <view class="mode-hint" wx:if="{{currentMode === 'chi'}}">
+        <text>请选择3张同花色连续数字牌（如2万3万4万）</text>
+        </view>
+        <view class="mode-hint" wx:if="{{currentMode === 'peng'}}">
+        <text>选择1张牌，自动添加3张相同牌</text>
+        </view>
+        <view class="mode-hint" wx:if="{{currentMode === 'minggang' || currentMode === 'angang'}}">
+        <text>选择1张牌，自动添加4张相同牌</text>
+        </view>
+    </view>
+
+    <!-- 手牌显示区域 -->
+    <view class="section card hand-card">
+    <view class="hand-section-heading">
+        <text class="section-title">当前手牌（{{tiles.totalTiles(handCards, actionGroups)}}/{{tiles.targetTiles(actionGroups)}}张）</text>
+        <text class="gang-count-hint" wx:if="{{tiles.gangCount(actionGroups) > 0}}">
+            {{tiles.gangCount(actionGroups)}}组杠牌 · 总数+{{tiles.gangCount(actionGroups)}}张
+        </text>
+    </view>
+        <view class="cards-display">
+        <block wx:for="{{handCards}}" wx:key="index">
+            <view class="card-item" bindtap="removeCard" data-index="{{index}}">
+            <image class="card-image" src="{{item.image}}" mode="aspectFit" />
+            <text class="card-name">{{item.name}}</text>
+            </view>
+        </block>
+        <block wx:for="{{actionGroups}}" wx:key="index" wx:for-item="group" wx:for-index="gidx">
+            <view class="meld-group {{group.displayClass}}" bindtap="removeActionGroup" data-index="{{gidx}}">
+                <text class="meld-badge">{{group.type}}</text>
+                <view class="meld-tiles">
+                    <block wx:for="{{group.cards}}" wx:key="index" wx:for-item="card">
+                        <image class="meld-tile" src="{{card.image}}" mode="aspectFit" />
+                    </block>
+                </view>
+            </view>
+        </block>
+        <view class="empty-placeholder" wx:if="{{handCards.length === 0 && actionGroups.length === 0}}">
+        <text>请选择麻将牌</text>
+        </view>
+        </view>
+    </view>
+
+    <!-- 吃牌临时选择显示 -->
+    <view class="section card" wx:if="{{currentMode === 'chi' && tempChiCards.length > 0}}">
+    <text class="section-title">吃牌选择中（{{tempChiCards.length}}/3张）</text>
+        <view class="cards-display">
+        <block wx:for="{{tempChiCards}}" wx:key="index">
+            <view class="card-item">
+            <image class="card-image" src="{{item.image}}" mode="aspectFit" />
+            <text class="card-name">{{item.name}}</text>
+            </view>
+        </block>
+        </view>
+    </view>
+
+    <!-- 胡牌信息 -->
+    <view class="section card">
+    <text class="section-title">胡牌信息</text>
+        <view class="hu-info">
+            <view class="hu-info-row">
+                <text class="hu-label">胡的牌：</text>
+                <!-- 牌数不足：提示还需几张 -->
+                <view class="win-display waiting" wx:if="{{winTileState === 'waiting'}}">
+                    <text class="waiting-text">还需选择 {{remainingTiles}} 张牌</text>
+                </view>
+                <!-- 听牌状态：显示所有可胡牌及其番数 -->
+                <view class="win-display tingpai" wx:elif="{{winTileState === 'tingpai'}}">
+                    <block wx:if="{{tingpaiList.length > 0}}">
+                        <view class="tingpai-list">
+                            <block wx:for="{{tingpaiList}}" wx:key="name" wx:for-item="tp">
+                                <view class="tingpai-item">
+                                    <image class="tingpai-tile" src="{{tp.image}}" mode="aspectFit" />
+                                    <text class="tingpai-fan">{{tp.totalFan}}番</text>
+                                </view>
+                            </block>
+                        </view>
+                    </block>
+                    <view class="no-tingpai" wx:else>
+                        <text>暂无听牌</text>
+                    </view>
+                </view>
+                <!-- 已满：显示胡的牌（图片）+ 胡牌结果 -->
+                <view class="win-display winning" wx:elif="{{winTileState === 'winning'}}">
+                    <view class="winning-tile-wrap">
+                        <image wx:if="{{winTile}}" class="winning-tile" src="{{winTile.image}}" mode="aspectFit" />
+                        <text wx:else class="waiting-text">未选择胡的牌</text>
+                        <text class="winning-label" wx:if="{{winTile}}">胡的牌</text>
+                    </view>
+
+                    <!-- 胡牌结果内联展示 -->
+                    <view class="hu-result">
+                        <!-- 可胡牌 -->
+                        <block wx:if="{{result.canHu}}">
+                            <view class="hu-result-header success">
+                                <text class="hu-status-icon">🎉</text>
+                                <text class="hu-status-text">可胡牌</text>
+                            </view>
+                            <view class="hu-total-fan">
+                                <text class="hu-total-fan-num">{{result.totalFan}}</text>
+                                <text class="hu-total-fan-unit">番</text>
+                            </view>
+                            <view class="hu-fan-list">
+                                <block wx:for="{{result.fanList}}" wx:key="name" wx:for-item="fan">
+                                    <view class="hu-fan-tag">
+                                        <text class="hu-fan-name">{{fan.name}}</text>
+                                        <text class="hu-fan-count">{{fan.fan}}番</text>
+                                    </view>
+                                </block>
+                            </view>
+                        </block>
+                        <!-- 牌型成立，但未达到国标麻将至少8番的门槛 -->
+                        <block wx:elif="{{result.isHuShape && result.reason === 'LESS_THAN_8_FAN'}}">
+                            <view class="hu-result-header error">
+                                <text class="hu-status-icon">⚠️</text>
+                                <text class="hu-status-text">不足8番，不能和牌</text>
+                            </view>
+                            <view class="hu-total-fan">
+                                <text class="hu-total-fan-num">{{result.totalFan}}</text>
+                                <text class="hu-total-fan-unit">番</text>
+                            </view>
+                            <view class="hu-fan-list">
+                                <block wx:for="{{result.fanList}}" wx:key="name" wx:for-item="fan">
+                                    <view class="hu-fan-tag">
+                                        <text class="hu-fan-name">{{fan.name}}</text>
+                                        <text class="hu-fan-count">{{fan.fan}}番</text>
+                                    </view>
+                                </block>
+                            </view>
+                        </block>
+                        <!-- 牌型结构不成立 -->
+                        <block wx:else>
+                            <view class="hu-result-header error">
+                                <text class="hu-status-icon">❌</text>
+                                <text class="hu-status-text">不可胡牌</text>
+                            </view>
+                            <view class="hu-no-tip">
+                                <text>当前牌型不符合胡牌规则，请调整手牌</text>
+                            </view>
+                        </block>
+                    </view>
+                </view>
+            </view>
+            </view>
+    </view>
+
+    <!-- 次要设置放在结果之后，减少查看胡牌信息所需滚动距离 -->
+    <view class="section card compact-settings">
+        <text class="section-title">特殊规则</text>
+        <view class="special-rules">
+            <block wx:for="{{specialRules}}" wx:key="value">
+                <label class="rule-item">
+                    <checkbox checked="{{item.checked}}" bindchange="toggleRule" data-rule="{{item.value}}" />
+                    <text class="rule-text">{{item.name}}</text>
+                </label>
+            </block>
+        </view>
+        <view class="settings-divider"></view>
+        <view class="wind-selection">
+            <view class="wind-item">
+                <text>圈风</text>
+                <picker range="{{windOptions}}" value="{{roundWind}}" bindchange="changeRoundWind">
+                    <view class="picker">{{windOptions[roundWind]}}圈</view>
+                </picker>
+            </view>
+            <view class="wind-item">
+                <text>风位</text>
+                <picker range="{{windOptions}}" value="{{seatWind}}" bindchange="changeSeatWind">
+                    <view class="picker">{{windOptions[seatWind]}}风</view>
+                </picker>
+            </view>
+        </view>
+    </view>
+
+    <!-- 功能按钮 -->
+    <view class="action-buttons">
+    <button class="btn clear" bindtap="clearAll">清空重来</button>
+    <button class="btn rules" bindtap="goToRules">查看牌型规则</button>
+    </view>
+</view>

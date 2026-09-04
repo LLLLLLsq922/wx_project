@@ -2,11 +2,16 @@
 
 var test = require('node:test');
 var assert = require('node:assert/strict');
+var fs = require('node:fs');
+var path = require('node:path');
 
 // 核心模块保留了面向微信开发者工具的详细日志；测试只关心断言结果。
 console.log = function () {};
 
 var mahjongUtil = require('../util/mahjongUtil.js');
+var positiveCoverage = {};
+var negativeCoverage = {};
+var positiveResults = {};
 
 function tile(name) {
     var value = parseInt(name, 10);
@@ -45,10 +50,13 @@ function assertHasFan(result, name, fan) {
     });
     assert.ok(item, '应计入番种：' + name);
     if (fan !== undefined) assert.equal(item.fan, fan);
+    positiveCoverage[name] = true;
+    if (!positiveResults[name]) positiveResults[name] = result;
 }
 
 function assertNotHasFan(result, name) {
     assert.equal(fanNames(result).includes(name), false, '不应重复计入番种：' + name);
+    negativeCoverage[name] = true;
 }
 
 var lowFanHand = [
@@ -558,7 +566,7 @@ test('三杠与四杠保留规则允许的杠牌加计', function () {
     ]);
     assertHasFan(threeKongs, '三杠', 32);
     assertHasFan(threeKongs, '双暗杠', 8);
-    assertHasFan(threeKongs, '明杠', 1);
+    assertNotHasFan(threeKongs, '明杠');
 
     var fourKongs = calculate(['东', '东'], { winTile: '东' }, [
         group('暗杠', ['1万', '1万', '1万', '1万']),
@@ -568,10 +576,52 @@ test('三杠与四杠保留规则允许的杠牌加计', function () {
     ]);
     assertHasFan(fourKongs, '四杠', 88);
     assertHasFan(fourKongs, '双暗杠', 8);
-    assertHasFan(fourKongs, '双明杠', 4);
+    assertNotHasFan(fourKongs, '双明杠');
     assertNotHasFan(fourKongs, '三杠');
     assertNotHasFan(fourKongs, '碰碰和');
     assertNotHasFan(fourKongs, '单钓将');
+});
+
+test('一明杠一暗杠按双杠组合计6番，且不重复计单明杠', function () {
+    var result = calculate([
+        '1万', '2万', '3万',
+        '4条', '5条', '6条',
+        '东', '东'
+    ], { winTile: '东' }, [
+        group('明杠', ['7万', '7万', '7万', '7万']),
+        group('暗杠', ['8条', '8条', '8条', '8条'])
+    ]);
+
+    assertHasFan(result, '双明杠', 4);
+    assertHasFan(result, '暗杠', 2);
+    assertNotHasFan(result, '明杠');
+    assert.equal(result.fanList.filter(function (item) {
+        return item.name === '双明杠' || item.name === '暗杠' || item.name === '明杠';
+    }).reduce(function (sum, item) { return sum + item.fan; }, 0), 6);
+
+    var singleOpenKong = calculate([
+        '1万', '2万', '3万',
+        '4条', '5条', '6条',
+        '7筒', '8筒', '9筒',
+        '东', '东'
+    ], { winTile: '东' }, [
+        group('明杠', ['5万', '5万', '5万', '5万'])
+    ]);
+    assertHasFan(singleOpenKong, '明杠', 1);
+});
+
+test('全带五只排除断幺，仍可加计无字', function () {
+    var result = calculate([
+        '3万', '4万', '5万',
+        '4条', '5条', '6条',
+        '5筒', '5筒', '5筒',
+        '5万', '6万', '7万',
+        '5条', '5条'
+    ], { winTile: '5条' });
+
+    assertHasFan(result, '全带五', 16);
+    assertHasFan(result, '无字', 1);
+    assertNotHasFan(result, '断幺');
 });
 
 test('全大可与断幺叠加', function () {
@@ -698,4 +748,260 @@ test('荣和牌完成的刻子不计暗刻，自摸完成则仍计暗刻', funct
     assertNotHasFan(ron, '三暗刻');
     assertHasFan(ron, '双暗刻', 2);
     assertHasFan(tsumo, '三暗刻', 16);
+});
+
+test('高番字牌、幺九牌与特殊牌型均有独立命中牌例', function () {
+    assertHasFan(calculate([
+        '东', '东', '东', '南', '南', '南', '西', '西', '西',
+        '北', '北', '北', '中', '中'
+    ], { winTile: '中' }), '大四喜', 88);
+
+    assertHasFan(calculate([
+        '中', '中', '中', '发', '发', '发', '白', '白', '白',
+        '1万', '2万', '3万', '东', '东'
+    ], { winTile: '东' }), '大三元', 88);
+
+    assertHasFan(calculate([
+        '1万', '1万', '1万', '2万', '3万', '4万', '5万', '5万',
+        '6万', '7万', '8万', '9万', '9万', '9万'
+    ], { winTile: '5万' }), '九莲宝灯', 88);
+
+    assertHasFan(calculate([
+        '1万', '1万', '2万', '2万', '3万', '3万', '4万',
+        '4万', '5万', '5万', '6万', '6万', '7万', '7万'
+    ], { winTile: '7万' }), '连七对', 88);
+
+    assertHasFan(calculate([
+        '1万', '1万', '1万', '9万', '9万', '9万',
+        '1条', '1条', '1条', '9条', '9条', '9条', '1筒', '1筒'
+    ], { winTile: '1筒' }), '清幺九', 64);
+
+    assertHasFan(calculate([
+        '东', '东', '东', '南', '南', '南', '西', '西', '西',
+        '1万', '2万', '3万', '北', '北'
+    ], { winTile: '北' }), '小四喜', 64);
+
+    assertHasFan(calculate([
+        '中', '中', '中', '发', '发', '发',
+        '1万', '2万', '3万', '4条', '5条', '6条', '白', '白'
+    ], { winTile: '白' }), '小三元', 64);
+
+    assertHasFan(calculate([
+        '2万', '2万', '2万', '3条', '3条', '3条',
+        '4筒', '4筒', '4筒', '5万', '5万', '5万', '东', '东'
+    ], { winTile: '东' }), '四暗刻', 64);
+});
+
+test('同色同顺、节高和范围牌型均有独立命中牌例', function () {
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '1万', '2万', '3万', '9万', '9万'
+    ], { winTile: '9万' }, [
+        group('吃', ['1万', '2万', '3万']),
+        group('吃', ['1万', '2万', '3万'])
+    ]), '一色四同顺', 48);
+
+    assertHasFan(calculate([
+        '1万', '1万', '1万', '2万', '2万', '2万',
+        '3万', '3万', '3万', '4万', '4万', '4万', '东', '东'
+    ], { winTile: '东' }), '一色四节高', 48);
+
+    assertHasFan(calculate([
+        '1万', '1万', '1万', '9万', '9万', '9万',
+        '东', '东', '东', '中', '中', '中', '白', '白'
+    ], { winTile: '白' }), '混幺九', 32);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '1万', '2万', '3万',
+        '4条', '5条', '6条', '东', '东'
+    ], { winTile: '东' }, [
+        group('吃', ['1万', '2万', '3万'])
+    ]), '一色三同顺', 24);
+
+    assertHasFan(calculate([
+        '1万', '1万', '1万', '2万', '2万', '2万',
+        '3万', '3万', '3万', '4条', '5条', '6条', '东', '东'
+    ], { winTile: '东' }), '一色三节高', 24);
+
+    assertHasFan(calculate([
+        '4万', '5万', '6万', '4条', '5条', '6条',
+        '4筒', '4筒', '4筒', '6万', '6万', '6万', '5条', '5条'
+    ], { winTile: '5条' }), '全中', 24);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '1条', '2条', '3条',
+        '1筒', '1筒', '1筒', '3万', '3万', '3万', '2条', '2条'
+    ], { winTile: '2条' }), '全小', 24);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '7万', '8万', '9万',
+        '1条', '2条', '3条', '7条', '8条', '9条', '5筒', '5筒'
+    ], { winTile: '5筒' }), '三色双龙会', 16);
+
+    assertHasFan(calculate([
+        '6万', '7万', '8万', '7条', '8条', '9条',
+        '6筒', '6筒', '6筒', '9万', '9万', '9万', '7筒', '7筒'
+    ], { winTile: '7筒' }), '大于五', 12);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '2条', '3条', '4条',
+        '1筒', '1筒', '1筒', '4万', '4万', '4万', '2筒', '2筒'
+    ], { winTile: '2筒' }), '小于五', 12);
+});
+
+test('跨花色组合、风箭刻与全带牌型均有独立命中牌例', function () {
+    assertHasFan(calculate([
+        '东', '东', '东', '南', '南', '南', '西', '西', '西',
+        '2万', '3万', '4万', '5筒', '5筒'
+    ], { roundWind: 3, seatWind: 3, winTile: '5筒' }), '三风刻', 12);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '4条', '5条', '6条',
+        '7筒', '8筒', '9筒', '2万', '3万', '4万', '东', '东'
+    ], { winTile: '东' }), '花龙', 8);
+
+    assertHasFan(calculate([
+        '2万', '2万', '2万', '3条', '3条', '3条',
+        '4筒', '4筒', '4筒', '6万', '7万', '8万', '东', '东'
+    ], { winTile: '东' }), '三色三节高', 8);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '2条', '3条', '4条',
+        '3筒', '4筒', '5筒', '7万', '8万', '9万', '东', '东'
+    ], { winTile: '东' }), '三色三步高', 6);
+
+    assertHasFan(calculate([
+        '中', '中', '中', '发', '发', '发',
+        '1万', '2万', '3万', '4条', '5条', '6条', '东', '东'
+    ], { winTile: '东' }), '双箭刻', 6);
+
+    assertHasFan(calculate([
+        '1万', '2万', '3万', '7万', '8万', '9万',
+        '1条', '1条', '1条', '东', '东', '东', '白', '白'
+    ], { roundWind: 1, seatWind: 2, winTile: '白' }), '全带幺', 4);
+});
+
+test('和牌事件、风位、门清及基础花色番均有独立命中牌例', function () {
+    assertHasFan(calculate(lowFanHand, {
+        haidilaoyue: true,
+        winTile: '5条'
+    }), '海底捞月', 8);
+
+    assertHasFan(calculate(lowFanHand, {
+        zimo: true,
+        gangshangkaihua: true,
+        winTile: '5条'
+    }), '杠上开花', 8);
+
+    assertHasFan(calculate(lowFanHand, {
+        juezhang: true,
+        winTile: '5条'
+    }), '和绝张', 4);
+
+    var oneSuitWithHonors = calculate([
+        '1万', '2万', '3万', '4万', '5万', '6万',
+        '7万', '8万', '9万', '东', '东', '东', '中', '中'
+    ], { roundWind: 1, seatWind: 2, winTile: '中' });
+    assertHasFan(oneSuitWithHonors, '混一色', 6);
+
+    var southSeat = calculate([
+        '南', '南', '南', '1万', '2万', '3万',
+        '4条', '5条', '6条', '7筒', '8筒', '9筒', '中', '中'
+    ], { roundWind: 0, seatWind: 1, winTile: '中' });
+    assertHasFan(southSeat, '门风刻', 2);
+
+    var closed = calculate(lowFanHand, { winTile: '5条' });
+    assertHasFan(closed, '门前清', 2);
+
+    var twoSuits = calculate([
+        '1万', '2万', '3万', '4万', '5万', '6万',
+        '2条', '3条', '4条', '7条', '8条', '9条', '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(twoSuits, '缺一门', 1);
+
+    var noHonors = calculate([
+        '1万', '1万', '1万', '3条', '3条', '3条',
+        '5筒', '5筒', '5筒', '6万', '7万', '8万', '2条', '2条'
+    ], { winTile: '2条' });
+    assertHasFan(noHonors, '无字', 1);
+
+    var exposedSelfDraw = calculate([
+        '4万', '5万', '6万', '2条', '3条', '4条',
+        '6筒', '7筒', '8筒', '5条', '5条'
+    ], { zimo: true, winTile: '5条' }, [
+        group('吃', ['1万', '2万', '3万'])
+    ]);
+    assertHasFan(exposedSelfDraw, '自摸', 1);
+});
+
+test('老少副和无番和均有独立命中牌例', function () {
+    var oldYoung = calculate([
+        '1万', '2万', '3万', '7万', '8万', '9万',
+        '2条', '3条', '4条', '5筒', '6筒', '7筒', '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(oldYoung, '老少副', 1);
+
+    var groups = [
+        group('吃', ['1万', '2万', '3万']),
+        group('吃', ['5万', '6万', '7万']),
+        group('吃', ['6筒', '7筒', '8筒'])
+    ];
+    var noFan = calculate(
+        ['2条', '3条', '4条', '东', '东'],
+        { roundWind: 1, seatWind: 2, winTile: '4条' },
+        groups
+    );
+    assertHasFan(noFan, '无番和', 8);
+});
+
+test('80个无花牌番种的正例、负例与不计矩阵不存在空项', function () {
+    var definitions = mahjongUtil.getFanDefinitions();
+    var coverageDocument = fs.readFileSync(
+        path.join(__dirname, '..', 'docs', 'guobiao-coverage.md'),
+        'utf8'
+    );
+    var negativeBaselines = [
+        calculate(lowFanHand, { winTile: '5条' }),
+        calculate([
+            '1万', '1万', '1万', '3条', '3条', '3条',
+            '5筒', '5筒', '5筒', '6万', '7万', '8万', '2条', '2条'
+        ], { winTile: '2条' }),
+        calculate([
+            '4万', '5万', '6万', '2条', '3条', '4条',
+            '6筒', '7筒', '8筒', '5条', '5条'
+        ], { zimo: true, winTile: '5条' }, [
+            group('吃', ['1万', '2万', '3万'])
+        ])
+    ];
+
+    definitions.forEach(function (definition) {
+        assert.ok(coverageDocument.indexOf(definition.name) !== -1, '覆盖文档缺少：' + definition.name);
+        if (!negativeCoverage[definition.name]) {
+            var negative = negativeBaselines.find(function (result) {
+                return fanNames(result).indexOf(definition.name) === -1;
+            });
+            assert.ok(negative, '缺少负例基准：' + definition.name);
+            assertNotHasFan(negative, definition.name);
+        }
+    });
+
+    var missingPositive = definitions.filter(function (definition) {
+        return !positiveCoverage[definition.name];
+    }).map(function (definition) { return definition.name; });
+    var missingNegative = definitions.filter(function (definition) {
+        return !negativeCoverage[definition.name];
+    }).map(function (definition) { return definition.name; });
+    assert.deepEqual(missingPositive, [], '缺少正例：' + missingPositive.join('、'));
+    assert.deepEqual(missingNegative, [], '缺少负例：' + missingNegative.join('、'));
+
+    definitions.forEach(function (definition) {
+        assert.ok(Array.isArray(definition.exclusions), '不计关系未声明：' + definition.name);
+        assert.ok(positiveResults[definition.name], '不计关系缺少命中牌例：' + definition.name);
+        definition.exclusions.forEach(function (excluded) {
+            assert.equal(
+                fanNames(positiveResults[definition.name]).indexOf(excluded),
+                -1,
+                definition.name + '应不计' + excluded
+            );
+        });
+    });
 });

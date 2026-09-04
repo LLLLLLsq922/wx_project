@@ -823,9 +823,9 @@ var EXCLUSIONS = {
     '全中': ['断幺'],
     '全小': ['无字'],
     '清龙': ['连六', '老少副'],
-    '三色双龙会': ['老少副', '一般高', '喜相逢', '无字', '缺一门'],
+    '三色双龙会': ['平和', '无字', '喜相逢', '老少副'],
     '一色三步高': [],
-    '全带五': ['无字', '断幺'],
+    '全带五': ['断幺'],
     '三同刻': ['双同刻'],
     '三暗刻': ['双暗刻'],
     '全不靠': ['五门齐', '门前清'],
@@ -1733,7 +1733,9 @@ function fanBuQiuRen(allSets, handCards, actionGroups, options) {
 // 双明杠
 function fanShuangMingGang(allSets) {
     var cnt = countSets(allSets);
-    return cnt.minggang === 2;
+    // 官方规则规定两明杠计4分，一明杠加一暗杠计6分。
+    // 混合双杠按“双明杠4分 + 暗杠2分”表达，明杠1分由不计关系移除。
+    return cnt.gang === 2 && cnt.minggang >= 1;
 }
 
 // 和绝张
@@ -1941,7 +1943,8 @@ function fanYaoJiuKe(allSets, handCards, actionGroups, options) {
 // 明杠
 function fanMingGang(allSets) {
     var cnt = countSets(allSets);
-    return cnt.minggang >= 1;
+    // 两杠及以上由双明杠、三杠或四杠覆盖，不能再重复追加单明杠。
+    return cnt.gang === 1 && cnt.minggang === 1;
 }
 
 // 缺一门：缺一种花色数牌

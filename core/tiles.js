@@ -241,6 +241,28 @@ function validateMelds(melds) {
                 expected: expectedLength,
                 actual: tiles.length
             });
+            continue;
+        }
+
+        var baseIds = tiles.map(getBaseTileId);
+        if (baseIds.some(function (id) { return !id; })) continue;
+        if (type === 'chi') {
+            var parsed = baseIds.map(function (id) {
+                var match = /^([msp])([1-9])$/.exec(id);
+                return match ? { suit: match[1], value: parseInt(match[2], 10) } : null;
+            });
+            var expectedSuit = parsed[0] && parsed[0].suit;
+            var sameSuit = !!expectedSuit && parsed.every(function (tile) {
+                return tile && tile.suit === expectedSuit;
+            });
+            var values = parsed.filter(Boolean).map(function (tile) { return tile.value; })
+                .sort(function (a, b) { return a - b; });
+            if (!sameSuit || values.length !== 3 ||
+                values[1] !== values[0] + 1 || values[2] !== values[1] + 1) {
+                errors.push({ code: 'INVALID_CHI_TILES', index: i });
+            }
+        } else if (!baseIds.every(function (id) { return id === baseIds[0]; })) {
+            errors.push({ code: 'INVALID_MELD_TILES', index: i });
         }
     }
     return { valid: errors.length === 0, errors: errors };

@@ -79,6 +79,19 @@ test('副露类型和实际张数被统一校验', function () {
     assert.deepEqual(result.errors.map(function (item) { return item.code; }), [
         'INVALID_MELD_LENGTH', 'INVALID_MELD_TYPE'
     ]);
+
+    var composition = tiles.validateMelds([
+        { type: 'chi', tiles: ['m1', 'm2', 'p3'] },
+        { type: 'chi', tiles: ['s1', 's3', 's4'] },
+        { type: 'pon', tiles: ['p5', 'p5', 'p6'] },
+        { type: 'openKong', tiles: ['east', 'east', 'east', 'south'] }
+    ]);
+    assert.deepEqual(composition.errors.map(function (item) { return item.code; }), [
+        'INVALID_CHI_TILES',
+        'INVALID_CHI_TILES',
+        'INVALID_MELD_TILES',
+        'INVALID_MELD_TILES'
+    ]);
 });
 
 test('零和账本生成可追溯的玩家净变化', function () {
@@ -239,6 +252,72 @@ test('国标适配器在进入旧规则引擎前阻止第五张同牌', function
     });
     assert.equal(result.canWin, false);
     assert.equal(result.reason, 'INVALID_TILE_COPIES');
+});
+
+test('国标适配器读取顶层规范和牌张并校验和牌上下文', function () {
+    var hand = [
+        'm1', 'm2', 'm3',
+        'm3', 'm4', 'm5',
+        's2', 's3', 's4',
+        'p6', 'p7', 'p8',
+        's5', 's5'
+    ];
+    var normalized = guobiao.calculateWin({
+        concealedTiles: hand,
+        winTile: 's5',
+        context: { roundWind: 0, seatWind: 1 }
+    });
+    assert.equal(normalized.isWinningShape, true);
+    assert.notEqual(normalized.reason, 'MISSING_WIN_TILE');
+
+    var missing = guobiao.calculateWin({ concealedTiles: hand });
+    assert.equal(missing.reason, 'MISSING_WIN_TILE');
+
+    var outside = guobiao.calculateWin({ concealedTiles: hand, winTile: 'p9' });
+    assert.equal(outside.reason, 'WIN_TILE_NOT_IN_CONCEALED_HAND');
+
+    var invalidWind = guobiao.calculateWin({
+        concealedTiles: hand,
+        winTile: 's5',
+        context: { roundWind: 4 }
+    });
+    assert.equal(invalidWind.reason, 'INVALID_WIND_INDEX');
+});
+
+test('国标听牌分析只返回达到8番门槛的合法和牌', function () {
+    var waits = guobiao.analyzeWaits({
+        concealedTiles: legacyTiles([
+            '1万', '2万', '3万',
+            '3万', '4万', '5万',
+            '2条', '3条', '4条',
+            '6筒', '7筒', '8筒',
+            '5条'
+        ])
+    });
+
+    assert.equal(waits.some(function (item) { return item.tileId === 's5'; }), false);
+});
+
+test('国标听牌分析按可见牌扣减余量，并排除已见四张的牌', function () {
+    var thirteenOrphans = [
+        'm1', 'm9', 's1', 's9', 'p1', 'p9',
+        'east', 'south', 'west', 'north', 'red', 'green', 'white'
+    ];
+    var initial = guobiao.analyzeWaits({ concealedTiles: thirteenOrphans });
+    assert.equal(initial.length, 13);
+    assert.equal(initial.find(function (item) { return item.tileId === 'east'; }).remaining, 3);
+
+    var reduced = guobiao.analyzeWaits({
+        concealedTiles: thirteenOrphans,
+        visibleTiles: ['east', 'east']
+    });
+    assert.equal(reduced.find(function (item) { return item.tileId === 'east'; }).remaining, 1);
+
+    var exhausted = guobiao.analyzeWaits({
+        concealedTiles: thirteenOrphans,
+        visibleTiles: ['east', 'east', 'east']
+    });
+    assert.equal(exhausted.some(function (item) { return item.tileId === 'east'; }), false);
 });
 
 test('国标无花牌规则目录包含完整80项', function () {

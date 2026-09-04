@@ -35,10 +35,17 @@ function normalizeInput(input) {
     input = input || {};
     var concealed = input.concealedTiles || input.handCards || [];
     var melds = input.melds || input.actionGroups || [];
+    var sourceContext = input.context || input.options || {};
+    var context = {};
+    Object.keys(sourceContext).forEach(function (key) { context[key] = sourceContext[key]; });
+    if (context.winTile === undefined && input.winTile !== undefined) context.winTile = input.winTile;
+    if (context.winTile !== undefined && context.winTile !== null) {
+        context.winTile = toLegacyTile(context.winTile).name;
+    }
     return {
         handCards: concealed.map(toLegacyTile),
         actionGroups: melds.map(toLegacyMeld),
-        context: input.context || input.options || {}
+        context: context
     };
 }
 
@@ -55,6 +62,17 @@ function validateInput(input) {
         errors.push({ code: 'INVALID_WINNING_TILE_COUNT', details: counts });
     }
     var context = normalized.context;
+    if (!context.winTile) {
+        errors.push({ code: 'MISSING_WIN_TILE' });
+    } else if (!normalized.handCards.some(function (tile) { return tile.name === context.winTile; })) {
+        errors.push({ code: 'WIN_TILE_NOT_IN_CONCEALED_HAND' });
+    }
+    ['roundWind', 'seatWind'].forEach(function (key) {
+        if (context[key] !== undefined &&
+            (!Number.isInteger(context[key]) || context[key] < 0 || context[key] > 3)) {
+            errors.push({ code: 'INVALID_WIND_INDEX', field: key });
+        }
+    });
     if ((context.miaoshouhuichun || context.gangshangkaihua) && !context.zimo) {
         errors.push({ code: 'SELF_DRAW_CONTEXT_REQUIRED' });
     }

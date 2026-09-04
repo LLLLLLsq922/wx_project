@@ -97,7 +97,7 @@ test('无任何其他番种的标准牌型按无番和计8番', function () {
     assert.deepEqual(result.fanList, [{ name: '无番和', fan: 8 }]);
 });
 
-test('十三幺能识别，且排除门前清、单钓将和自摸', function () {
+test('十三幺自摸计不求人，不串算混幺九、全带幺和自摸', function () {
     var result = calculate([
         '1万', '9万', '1条', '9条', '1筒', '9筒',
         '东', '南', '西', '北', '中', '发', '白', '东'
@@ -106,12 +106,15 @@ test('十三幺能识别，且排除门前清、单钓将和自摸', function ()
     assert.equal(result.canHu, true);
     assert.equal(result.pattern, '十三幺');
     assertHasFan(result, '十三幺', 88);
+    assertHasFan(result, '不求人', 4);
+    assertNotHasFan(result, '混幺九');
+    assertNotHasFan(result, '全带幺');
     assertNotHasFan(result, '门前清');
     assertNotHasFan(result, '单钓将');
     assertNotHasFan(result, '自摸');
 });
 
-test('七对能识别，且不重复计算门前清、单钓将和自摸', function () {
+test('七对自摸计不求人，且不重复计算门前清、单钓将和自摸', function () {
     var result = calculate([
         '1万', '1万', '2万', '2万', '4条', '4条', '6条',
         '6条', '3筒', '3筒', '8筒', '8筒', '东', '东'
@@ -120,6 +123,7 @@ test('七对能识别，且不重复计算门前清、单钓将和自摸', funct
     assert.equal(result.canHu, true);
     assert.equal(result.pattern, '七对');
     assertHasFan(result, '七对', 24);
+    assertHasFan(result, '不求人', 4);
     assertNotHasFan(result, '门前清');
     assertNotHasFan(result, '单钓将');
     assertNotHasFan(result, '自摸');
@@ -428,7 +432,7 @@ test('一般高、喜相逢和双同刻可在不同组合中分别重复计分',
     assertHasFan(twoDoublePungs, '双同刻', 4);
 });
 
-test('清一色排除缺一门和无字', function () {
+test('清一色只显式排除无字，单一花色本身不满足缺一门的两门条件', function () {
     var result = calculate([
         '1万', '1万', '1万',
         '2万', '3万', '4万',
@@ -440,6 +444,86 @@ test('清一色排除缺一门和无字', function () {
     assertHasFan(result, '清一色', 24);
     assertNotHasFan(result, '缺一门');
     assertNotHasFan(result, '无字');
+});
+
+test('字一色不会被误判为清一色', function () {
+    var result = calculate([
+        '东', '东', '东',
+        '南', '南', '南',
+        '西', '西', '西',
+        '中', '中', '中',
+        '白', '白'
+    ], { winTile: '白' });
+
+    assertHasFan(result, '字一色', 64);
+    assertNotHasFan(result, '清一色');
+});
+
+test('绿一色可加计清一色与断幺', function () {
+    var result = calculate([
+        '2条', '3条', '4条',
+        '2条', '3条', '4条',
+        '6条', '6条', '6条',
+        '8条', '8条', '8条',
+        '2条', '2条'
+    ], { winTile: '2条' });
+
+    assertHasFan(result, '绿一色', 88);
+    assertHasFan(result, '清一色', 24);
+    assertHasFan(result, '断幺', 2);
+});
+
+test('一色双龙会允许副露完成', function () {
+    var result = calculate([
+        '1万', '2万', '3万',
+        '7万', '8万', '9万',
+        '7万', '8万', '9万',
+        '5万', '5万'
+    ], { winTile: '5万' }, [
+        group('吃', ['1万', '2万', '3万'])
+    ]);
+
+    assertHasFan(result, '一色双龙会', 64);
+    assertNotHasFan(result, '清一色');
+    assertNotHasFan(result, '平和');
+});
+
+test('三杠与四杠保留规则允许的杠牌加计', function () {
+    var threeKongs = calculate([
+        '4条', '5条', '6条',
+        '东', '东'
+    ], { winTile: '东' }, [
+        group('暗杠', ['1万', '1万', '1万', '1万']),
+        group('暗杠', ['2万', '2万', '2万', '2万']),
+        group('明杠', ['3万', '3万', '3万', '3万'])
+    ]);
+    assertHasFan(threeKongs, '三杠', 32);
+    assertHasFan(threeKongs, '双暗杠', 8);
+    assertHasFan(threeKongs, '明杠', 1);
+
+    var fourKongs = calculate(['东', '东'], { winTile: '东' }, [
+        group('暗杠', ['1万', '1万', '1万', '1万']),
+        group('暗杠', ['2万', '2万', '2万', '2万']),
+        group('明杠', ['3万', '3万', '3万', '3万']),
+        group('明杠', ['4万', '4万', '4万', '4万'])
+    ]);
+    assertHasFan(fourKongs, '四杠', 88);
+    assertHasFan(fourKongs, '双暗杠', 8);
+    assertHasFan(fourKongs, '双明杠', 4);
+    assertNotHasFan(fourKongs, '单钓将');
+});
+
+test('全大可与断幺叠加', function () {
+    var result = calculate([
+        '7万', '7万', '7万',
+        '7条', '7条', '7条',
+        '8万', '8万', '8万',
+        '8条', '8条', '8条',
+        '7筒', '7筒'
+    ], { winTile: '7筒' });
+
+    assertHasFan(result, '全大', 24);
+    assertHasFan(result, '断幺', 2);
 });
 
 test('不求人排除门前清和自摸', function () {

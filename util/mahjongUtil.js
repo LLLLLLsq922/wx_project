@@ -813,51 +813,51 @@ var FAN_TABLE = [
 
 // EXCLUSIONS: 每个番种"不计"的番种（按官方"不计"规则）
 var EXCLUSIONS = {
-    '大四喜': ['三风刻', '圈风刻', '门风刻', '幺九刻', '碰碰和', '断幺'],
-    '大三元': ['箭刻', '双箭刻', '幺九刻', '碰碰和', '断幺'],
-    '绿一色': ['碰碰和', '混一色', '断幺', '无字', '一般高', '老少副', '连六'],
-    '九莲宝灯': ['清一色', '一般高', '老少副', '连六', '断幺', '无字', '边张', '坎张', '单钓将', '自摸'],
-    '四杠': ['三杠', '碰碰和', '双明杠', '双暗杠', '明杠', '暗杠'],
-    '连七对': ['七对', '清一色', '一般高', '老少副', '连六', '单钓将', '自摸', '门前清'],
-    '十三幺': ['五门齐', '全不靠', '单钓将', '自摸', '门前清', '断幺', '无字', '全带幺'],
-    '清幺九': ['混幺九', '全带幺', '无字', '碰碰和', '断幺', '幺九刻', '老少副', '一般高', '连六'],
-    '小四喜': ['三风刻', '圈风刻', '门风刻', '幺九刻'],
-    '小三元': ['箭刻', '双箭刻', '幺九刻'],
-    '字一色': ['碰碰和', '混幺九', '全带幺', '断幺', '幺九刻', '箭刻', '双箭刻'],
-    '四暗刻': ['三暗刻', '双暗刻', '碰碰和', '门前清', '断幺', '幺九刻'],
-    '一色双龙会': ['七对', '清一色', '一般高', '老少副', '连六', '断幺', '无字'],
-    '一色四同顺': ['一色三同顺', '三同刻', '一般高', '四归一', '缺一门', '无字'],
-    '一色四节高': ['一色三节高', '三同刻', '碰碰和', '断幺'],
-    '一色四步高': ['一色三步高', '一般高', '老少副', '连六', '缺一门', '无字'],
-    '三杠': ['双明杠', '双暗杠', '明杠', '暗杠'],
-    '混幺九': ['全带幺', '碰碰和', '断幺', '幺九刻', '老少副', '一般高', '连六'],
-    '七对': ['单钓将', '自摸', '门前清', '一般高', '老少副', '连六'],
+    '大四喜': ['三风刻', '碰碰和', '圈风刻', '门风刻', '幺九刻'],
+    '大三元': ['双箭刻', '箭刻'],
+    '绿一色': [],
+    '九莲宝灯': ['清一色', '门前清', '幺九刻'],
+    '四杠': ['单钓将'],
+    '连七对': ['七对', '清一色', '门前清', '单钓将'],
+    '十三幺': ['五门齐', '门前清', '单钓将'],
+    '清幺九': ['碰碰和', '全带幺', '幺九刻', '无字'],
+    '小四喜': ['三风刻', '幺九刻'],
+    '小三元': ['双箭刻', '箭刻'],
+    '字一色': ['碰碰和', '全带幺', '幺九刻'],
+    '四暗刻': ['三暗刻', '双暗刻', '碰碰和', '门前清'],
+    '一色双龙会': ['七对', '清一色', '平和', '无字', '一般高', '老少副'],
+    '一色四同顺': ['一色三节高', '四归一', '一般高'],
+    '一色四节高': ['一色三同顺', '碰碰和'],
+    '一色四步高': ['连六', '老少副'],
+    '三杠': [],
+    '混幺九': ['碰碰和', '全带幺', '幺九刻'],
+    '七对': ['门前清', '单钓将'],
     '七星不靠': ['五门齐', '门前清'],
     '全双刻': ['碰碰和', '断幺'],
-    '清一色': ['缺一门', '无字'],
-    '一色三同顺': ['一般高', '四归一', '缺一门', '无字'],
-    '一色三节高': ['三同刻', '断幺'],
-    '全大': ['无字', '断幺', '缺一门'],
-    '全中': ['无字', '断幺', '缺一门'],
-    '全小': ['无字', '断幺', '缺一门'],
-    '清龙': ['老少副', '连六', '一般高', '缺一门', '无字'],
+    '清一色': ['无字'],
+    '一色三同顺': ['一色三节高', '一般高'],
+    '一色三节高': ['一色三同顺'],
+    '全大': ['无字'],
+    '全中': ['断幺'],
+    '全小': ['无字'],
+    '清龙': [],
     '三色双龙会': ['老少副', '一般高', '喜相逢', '无字', '缺一门'],
-    '一色三步高': ['一般高', '老少副', '连六', '缺一门', '无字'],
-    '全带五': ['无字', '断幺', '缺一门'],
-    '三同刻': ['双同刻', '缺一门'],
-    '三暗刻': ['双暗刻', '一色三节高', '碰碰和'],
-    '全不靠': ['五门齐', '门前清', '单钓将', '自摸', '断幺'],
-    '组合龙': ['无字'],
-    '大于五': ['无字', '断幺', '缺一门'],
-    '小于五': ['无字', '断幺', '缺一门'],
-    '三风刻': ['圈风刻', '门风刻', '幺九刻'],
-    '推不倒': ['无字', '缺一门', '断幺'],
-    '三色三同顺': ['喜相逢', '缺一门', '无字'],
-    '三色三节高': ['缺一门'],
+    '一色三步高': [],
+    '全带五': ['无字', '断幺'],
+    '三同刻': [],
+    '三暗刻': ['双暗刻'],
+    '全不靠': ['五门齐', '门前清'],
+    '组合龙': [],
+    '大于五': ['无字'],
+    '小于五': ['无字'],
+    '三风刻': [],
+    '推不倒': ['缺一门'],
+    '三色三同顺': [],
+    '三色三节高': [],
     '妙手回春': ['自摸'],
     '杠上开花': ['自摸'],
     '抢杠和': ['和绝张'],
-    '三色三步高': ['喜相逢', '缺一门'],
+    '三色三步高': [],
     '碰碰和': [],
     '混一色': ['缺一门', '无字'],
     '五门齐': ['无字', '缺一门'],
@@ -1089,6 +1089,7 @@ function fanShiSanYao(allSets, handCards, actionGroups, options, huResult) {
 
 // 清幺九：全部由数牌 1、9 组成
 function fanQingYaoJiu(allSets) {
+    if (!fanPengPengHu(allSets)) return false;
     var yao = ['1万', '9万', '1条', '9条', '1筒', '9筒'];
     var tiles = getAllTilesFromSets(allSets);
     if (tiles.length === 0) return false;
@@ -1144,22 +1145,18 @@ function fanSiAnKe(allSets, handCards, actionGroups) {
 }
 
 // 一色双龙会：同花色 123 123 789 789 55
-function fanYiSeShuangLongHui(allSets, handCards, actionGroups) {
-    if (actionGroups && actionGroups.length > 0) return false;
-    if (!handCards || handCards.length !== 14) return false;
-    var types = {};
-    handCards.forEach(function (c) { types[c.type] = true; });
-    var tk = Object.keys(types);
-    if (tk.length !== 1 || tk[0] === '字') return false;
-    var suit = tk[0];
-    var count = {};
-    handCards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
-    if (Object.keys(count).length !== 7) return false;
-    var need = ['1', '2', '3', '5', '7', '8', '9'];
-    for (var i = 0; i < need.length; i++) {
-        if (count[need[i] + suit] !== 2) return false;
+function fanYiSeShuangLongHui(allSets) {
+    var shunzi = allSets.filter(function (set) { return set.kind === 'shunzi'; });
+    var jiang = allSets.filter(function (set) { return set.kind === 'jiang'; });
+    if (shunzi.length !== 4 || jiang.length !== 1 || jiang[0].suit === '字' || jiang[0].start !== 5) {
+        return false;
     }
-    return true;
+    var suit = jiang[0].suit;
+    var startCounts = {};
+    shunzi.forEach(function (set) {
+        if (set.suit === suit) startCounts[set.start] = (startCounts[set.start] || 0) + 1;
+    });
+    return startCounts[1] === 2 && startCounts[7] === 2;
 }
 
 // --- 48番 ---
@@ -1239,6 +1236,7 @@ function fanSanGang(allSets) {
 
 // 混幺九：全由幺九牌（含字牌）组成
 function fanHunYaoJiu(allSets) {
+    if (!fanPengPengHu(allSets)) return false;
     var tiles = getAllTilesFromSets(allSets);
     if (tiles.length === 0) return false;
     return tiles.every(function (t) { return YAOJIU_NAMES.indexOf(t) !== -1; });
@@ -1259,7 +1257,8 @@ function fanQingYiSe(allSets) {
         if (!p) return false;
         suits[p.suit] = true;
     }
-    return Object.keys(suits).length === 1;
+    var suitNames = Object.keys(suits);
+    return suitNames.length === 1 && suitNames[0] !== '字';
 }
 
 function fanYiSeSanTongShun(allSets) {
@@ -1684,7 +1683,11 @@ function fanQuanDaiYao(allSets) {
     var nonSpecial = allSets.filter(function (s) {
         return s.kind === 'kezi' || s.kind === 'shunzi' || s.kind === 'jiang';
     });
-    if (nonSpecial.length === 0) return false;
+    var mianziCount = nonSpecial.filter(function (s) {
+        return s.kind === 'kezi' || s.kind === 'shunzi';
+    }).length;
+    var jiangCount = nonSpecial.filter(function (s) { return s.kind === 'jiang'; }).length;
+    if (nonSpecial.length !== 5 || mianziCount !== 4 || jiangCount !== 1) return false;
     return nonSpecial.every(function (s) {
         return s.tiles.some(function (t) { return YAOJIU_NAMES.indexOf(t) !== -1; });
     });

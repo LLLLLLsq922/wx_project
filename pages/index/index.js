@@ -1,5 +1,6 @@
 // pages/index/index.js
-var mahjongUtil = require('../../util/mahjongUtil.js');
+// 通过玩法适配器访问规则，页面不再直接耦合旧国标实现。
+var mahjongUtil = require('../../rules/guobiao/engine.js');
 
 Page({
     /**

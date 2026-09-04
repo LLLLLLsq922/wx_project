@@ -27,7 +27,7 @@ test('开发文件被排除出上传包，动态牌图被明确包含', function
         return item.value;
     });
 
-    ['test', '.github', 'package.json', '.eslintrc.js', 'audio/ATTRIBUTION.md']
+    ['test', '.github', 'docs', 'package.json', '.eslintrc.js', 'audio/ATTRIBUTION.md']
         .forEach(function (item) { assert.ok(ignored.includes(item)); });
     assert.ok(included.includes('images/cards'));
 });

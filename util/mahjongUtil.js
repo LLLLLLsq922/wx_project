@@ -191,6 +191,10 @@ function checkHu(handCards, actionGroups) {
             _log('checkHu OK: 七对');
             return { canHu: true, pattern: '七对', special: '七对' };
         }
+        if (checkQiXingBuKao(handCards)) {
+            _log('checkHu OK: 七星不靠');
+            return { canHu: true, pattern: '七星不靠', special: '七星不靠' };
+        }
         if (checkQuanBuKao(handCards)) {
             _log('checkHu OK: 全不靠');
             return { canHu: true, pattern: '全不靠', special: '全不靠' };
@@ -249,32 +253,62 @@ function checkQiDuiPattern(cards) {
     return true;
 }
 
-// --- 全不靠 ---
-// 14 张单张：7 张字牌（各 1）+ 7 张数牌（无任意 3 张同花色连续）
-function checkQuanBuKao(cards) {
+// 生成全不靠使用的6种组合龙骨架：147、258、369三组分别对应不同花色。
+function getKnittedUniverses() {
+    var suitPermutations = permutations(['万', '条', '筒']);
+    var valueGroups = [[1, 4, 7], [2, 5, 8], [3, 6, 9]];
+    var universes = [];
+    for (var p = 0; p < suitPermutations.length; p++) {
+        var allowed = {};
+        for (var g = 0; g < valueGroups.length; g++) {
+            for (var v = 0; v < valueGroups[g].length; v++) {
+                allowed[valueGroups[g][v] + suitPermutations[p][g]] = true;
+            }
+        }
+        universes.push(allowed);
+    }
+    return universes;
+}
+
+function checkUnconnectedSingles(cards, requireAllHonors) {
     if (cards.length !== 14) return false;
     var count = {};
     cards.forEach(function (c) { count[c.name] = (count[c.name] || 0) + 1; });
-    for (var i = 0; i < ZI_NAMES.length; i++) {
-        if (count[ZI_NAMES[i]] !== 1) return false;
-    }
+
+    // 全不靠与七星不靠均由14张互不相同的单张组成。
+    var names = Object.keys(count);
+    if (names.length !== 14) return false;
+    for (var n = 0; n < names.length; n++) if (count[names[n]] !== 1) return false;
+
+    var honorCount = 0;
+    for (var i = 0; i < ZI_NAMES.length; i++) if (count[ZI_NAMES[i]] === 1) honorCount++;
+    if (requireAllHonors && honorCount !== 7) return false;
+
     var numCards = cards.filter(function (c) { return c.type !== '字'; });
-    if (numCards.length !== 7) return false;
-    // 数牌间不能成刻子（即不能重复）
-    for (var k in count) {
-        if (YAOJIU_NAMES.indexOf(k) === -1 || ZI_NAMES.indexOf(k) !== -1) continue;
-        if (count[k] > 1) return false;
-    }
-    // 按花色分组，无 3 连
-    var bySuit = { '万': [], '条': [], '筒': [] };
-    numCards.forEach(function (c) { bySuit[c.type].push(c.value); });
-    for (var s in bySuit) {
-        var v = bySuit[s].slice().sort(function (a, b) { return a - b; });
-        for (var i = 0; i < v.length - 2; i++) {
-            if (v[i + 1] === v[i] + 1 && v[i + 2] === v[i] + 2) return false;
+    if (numCards.length < 7 || numCards.length > 9) return false;
+
+    var universes = getKnittedUniverses();
+    for (var u = 0; u < universes.length; u++) {
+        var fits = true;
+        for (var c = 0; c < numCards.length; c++) {
+            if (!universes[u][numCards[c].name]) {
+                fits = false;
+                break;
+            }
         }
+        if (fits) return true;
     }
-    return true;
+    return false;
+}
+
+// 七星不靠：七种字牌齐全，加组合龙骨架中的任意七张数牌。
+function checkQiXingBuKao(cards) {
+    return checkUnconnectedSingles(cards, true);
+}
+
+// 全不靠：组合龙骨架九张数牌与七种字牌共16张中的任意14张单张。
+function checkQuanBuKao(cards) {
+    return checkUnconnectedSingles(cards, false);
 }
 
 // --- 组合龙 ---
@@ -351,42 +385,30 @@ function isValidFaceTiles(tiles) {
     return false;
 }
 
-// 9 张数牌（每花色 3 张）能否组成 [1,2,3]/[4,5,6]/[7,8,9] 三组跨花色顺子
+// 9 张数牌能否组成固定花色的147、258、369三组组合龙骨架。
 function canFormZuHeLong9(bySuit) {
     if (bySuit.万.length !== 3 || bySuit.条.length !== 3 || bySuit.筒.length !== 3) return false;
-    var groups = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
-    var used = { '万': {}, '条': {}, '筒': {} };
-    ['万', '条', '筒'].forEach(function (s) {
-        bySuit[s].forEach(function (v) { used[s][v] = (used[s][v] || 0) + 1; });
+    var names = [];
+    var seen = {};
+    ['万', '条', '筒'].forEach(function (suit) {
+        bySuit[suit].forEach(function (value) {
+            var name = value + suit;
+            names.push(name);
+            seen[name] = (seen[name] || 0) + 1;
+        });
     });
-    return _zhlTryGroup(0, used, groups);
-}
+    if (Object.keys(seen).length !== 9) return false;
 
-function _zhlTryGroup(gi, rem, groups) {
-    if (gi === 3) {
-        for (var s in rem) {
-            for (var v in rem[s]) if (rem[s][v] > 0) return false;
-        }
-        return true;
-    }
-    var g = groups[gi];
-    var suits = ['万', '条', '筒'];
-    var perms = permutations(suits);
-    for (var pi = 0; pi < perms.length; pi++) {
-        var perm = perms[pi];
-        var ok = true;
-        for (var i = 0; i < 3; i++) {
-            if ((rem[perm[i]][g[i]] || 0) < 1) { ok = false; break; }
-        }
-        if (ok) {
-            var newRem = {};
-            for (var s in rem) {
-                newRem[s] = {};
-                for (var v in rem[s]) newRem[s][v] = rem[s][v];
+    var universes = getKnittedUniverses();
+    for (var u = 0; u < universes.length; u++) {
+        var valid = true;
+        for (var i = 0; i < names.length; i++) {
+            if (!universes[u][names[i]]) {
+                valid = false;
+                break;
             }
-            for (var j = 0; j < 3; j++) newRem[perm[j]][g[j]]--;
-            if (_zhlTryGroup(gi + 1, newRem, groups)) return true;
         }
+        if (valid) return true;
     }
     return false;
 }
@@ -591,7 +613,7 @@ function analyzeSpecial(special, handCards, actionGroups, huResult) {
         return allSets;
     }
 
-    if (special === '全不靠') {
+    if (special === '全不靠' || special === '七星不靠') {
         for (var n4 in count) {
             var p4 = parseName(n4);
             allSets.push({
@@ -600,7 +622,7 @@ function analyzeSpecial(special, handCards, actionGroups, huResult) {
                 suit: p4 ? p4.suit : '字', start: p4 ? p4.value : null
             });
         }
-        allSets.push({ kind: 'special', special: '全不靠', tiles: [],
+        allSets.push({ kind: 'special', special: special, tiles: [],
                        concealed: true, isKong: false, name: '', suit: '', start: null });
         return allSets;
     }
@@ -702,6 +724,8 @@ var FAN_TABLE = [
     { name: '混幺九', fan: 32, check: fanHunYaoJiu },
     // 24番
     { name: '七对', fan: 24, check: fanQiDui },
+    { name: '七星不靠', fan: 24, check: fanQiXingBuKao },
+    { name: '全双刻', fan: 24, check: fanQuanShuangKe },
     { name: '清一色', fan: 24, check: fanQingYiSe },
     { name: '一色三同顺', fan: 24, check: fanYiSeSanTongShun },
     { name: '一色三节高', fan: 24, check: fanYiSeSanJieGao },
@@ -791,6 +815,8 @@ var EXCLUSIONS = {
     '三杠': ['双明杠', '双暗杠', '明杠', '暗杠'],
     '混幺九': ['全带幺', '碰碰和', '断幺', '幺九刻', '老少副', '一般高', '连六'],
     '七对': ['单钓将', '自摸', '门前清', '一般高', '老少副', '连六'],
+    '七星不靠': ['五门齐', '门前清'],
+    '全双刻': ['碰碰和', '断幺'],
     '清一色': ['缺一门', '无字'],
     '一色三同顺': ['一般高', '四归一', '缺一门', '无字'],
     '一色三节高': ['三同刻', '断幺'],
@@ -1345,6 +1371,22 @@ function fanSanAnKe(allSets) {
 }
 
 // --- 12番 ---
+
+function fanQiXingBuKao(allSets, handCards, actionGroups, options, huResult) {
+    return huResult.special === '七星不靠';
+}
+
+// 全双刻：四副刻子（杠）与将牌全部由2、4、6、8数牌组成。
+function fanQuanShuangKe(allSets) {
+    var counts = countSets(allSets);
+    if (counts.kezi !== 4 || counts.shunzi !== 0) return false;
+    var allTiles = getAllTilesFromSets(allSets);
+    if (allTiles.length === 0) return false;
+    return allTiles.every(function (name) {
+        var parsed = parseName(name);
+        return parsed && parsed.value % 2 === 0;
+    });
+}
 
 function fanQuanBuKao(allSets, handCards, actionGroups, options, huResult) {
     return huResult.special === '全不靠';

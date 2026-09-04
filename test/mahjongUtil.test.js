@@ -125,6 +125,82 @@ test('七对能识别，且不重复计算门前清、单钓将和自摸', funct
     assertNotHasFan(result, '自摸');
 });
 
+test('七星不靠按组合龙骨架识别为24番', function () {
+    var result = calculate([
+        '1万', '4万', '7万',
+        '2条', '5条',
+        '3筒', '6筒',
+        '东', '南', '西', '北', '中', '发', '白'
+    ], { winTile: '白' });
+
+    assert.equal(result.canHu, true);
+    assert.equal(result.pattern, '七星不靠');
+    assertHasFan(result, '七星不靠', 24);
+    assertNotHasFan(result, '全不靠');
+    assertNotHasFan(result, '五门齐');
+    assertNotHasFan(result, '门前清');
+});
+
+test('全不靠允许从16张合法骨架中任选14张单张', function () {
+    var result = calculate([
+        '1万', '4万', '7万',
+        '2条', '5条', '8条',
+        '3筒', '6筒', '9筒',
+        '东', '南', '西', '北', '中'
+    ], { winTile: '中' });
+
+    assert.equal(result.canHu, true);
+    assert.equal(result.pattern, '全不靠');
+    assertHasFan(result, '全不靠', 12);
+    assertNotHasFan(result, '七星不靠');
+});
+
+test('不符合任一147、258、369三色骨架时不能误判全不靠', function () {
+    var result = calculate([
+        '1万', '2万', '3万', '4万', '5万', '6万', '7万',
+        '东', '南', '西', '北', '中', '发', '白'
+    ], { winTile: '白' });
+
+    assert.notEqual(result.pattern, '全不靠');
+    assert.notEqual(result.pattern, '七星不靠');
+});
+
+test('全双刻计24番并排除碰碰和与断幺', function () {
+    var result = calculate([
+        '2万', '2万', '2万',
+        '4万', '4万', '4万',
+        '6条', '6条', '6条',
+        '8筒', '8筒', '8筒',
+        '2条', '2条'
+    ], { winTile: '2条' });
+
+    assert.equal(result.canHu, true);
+    assertHasFan(result, '全双刻', 24);
+    assertNotHasFan(result, '碰碰和');
+    assertNotHasFan(result, '断幺');
+});
+
+test('组合龙要求147、258、369三组分别固定花色', function () {
+    var valid = calculate([
+        '1万', '4万', '7万',
+        '2条', '5条', '8条',
+        '3筒', '6筒', '9筒',
+        '1筒', '1筒', '1筒',
+        '东', '东'
+    ], { winTile: '东' });
+    assertHasFan(valid, '组合龙', 12);
+
+    // 每组三个连续数字看似跨三门，但147、258、369均未固定花色。
+    var invalid = calculate([
+        '1万', '2条', '3筒',
+        '4条', '5筒', '6万',
+        '7筒', '8万', '9条',
+        '1筒', '1筒', '1筒',
+        '东', '东'
+    ], { winTile: '东' });
+    assertNotHasFan(invalid, '组合龙');
+});
+
 test('清一色排除缺一门和无字', function () {
     var result = calculate([
         '1万', '1万', '1万',

@@ -18,6 +18,13 @@ var YAOJIU_NAMES = ['1万', '9万', '1条', '9条', '1筒', '9筒',
                     '东', '南', '西', '北', '中', '发', '白'];
 var ZI_NAMES = ['东', '南', '西', '北', '中', '发', '白'];
 var GREEN_TILES = ['2条', '3条', '4条', '6条', '8条', '发'];
+var ALL_TILE_NAMES = (function () {
+    var result = [];
+    ['万', '条', '筒'].forEach(function (suit) {
+        for (var value = 1; value <= 9; value++) result.push(value + suit);
+    });
+    return result.concat(WINDS, DRAGONS);
+})();
 var MIN_HU_FAN = 8;
 
 // ====================================================================
@@ -504,8 +511,9 @@ function collectDecompositions(count, currentSets, results, pairName) {
 // 拆解分析：合并暗牌+操作组 -> 统一 allSets
 // ====================================================================
 
-function analyzeDecomposition(decomp, actionGroups) {
+function analyzeDecomposition(decomp, actionGroups, options) {
     var allSets = [];
+    options = options || {};
 
     var pairParsed = parseName(decomp.pair);
     allSets.push({
@@ -520,9 +528,18 @@ function analyzeDecomposition(decomp, actionGroups) {
 
     decomp.concealedSets.forEach(function (s) {
         var p = parseName(s.tiles[0]);
+        var completedByDiscard = false;
+        if (!options.zimo && options.winTile && s.type === 'kezi' && s.tiles[0] === options.winTile) {
+            // 荣和牌是该刻子的唯一可能归属时，此刻子不算暗刻。
+            var otherRoleUsesWinTile = decomp.pair === options.winTile ||
+                decomp.concealedSets.some(function (other) {
+                    return other !== s && other.tiles.indexOf(options.winTile) !== -1;
+                });
+            completedByDiscard = !otherRoleUsesWinTile;
+        }
         allSets.push({
             kind: s.type,              // 'kezi' | 'shunzi'
-            concealed: true,
+            concealed: !completedByDiscard,
             isKong: false,
             tiles: s.tiles.slice(),
             name: s.tiles[0],
@@ -755,13 +772,13 @@ var FAN_TABLE = [
     { name: '海底捞月', fan: 8, check: fanHaiDiLaoYue },
     { name: '杠上开花', fan: 8, check: fanGangShangKaiHua },
     { name: '抢杠和', fan: 8, check: fanQiangGangHu },
+    { name: '双暗杠', fan: 8, check: fanShuangAnGang },
     // 6番
     { name: '碰碰和', fan: 6, check: fanPengPengHu },
     { name: '混一色', fan: 6, check: fanHunYiSe },
     { name: '三色三步高', fan: 6, check: fanSanSeSanBuGao },
     { name: '五门齐', fan: 6, check: fanWuMenQi },
     { name: '全求人', fan: 6, check: fanQuanQiuRen },
-    { name: '双暗杠', fan: 6, check: fanShuangAnGang },
     { name: '双箭刻', fan: 6, check: fanShuangJianKe },
     // 4番
     { name: '全带幺', fan: 4, check: fanQuanDaiYao },
@@ -777,6 +794,7 @@ var FAN_TABLE = [
     { name: '四归一', fan: 2, check: fanSiGuiYi },
     { name: '双同刻', fan: 2, check: fanShuangTongKe },
     { name: '双暗刻', fan: 2, check: fanShuangAnKe },
+    { name: '暗杠', fan: 2, check: fanAnGang },
     { name: '断幺', fan: 2, check: fanDuanYao },
     // 1番
     { name: '一般高', fan: 1, check: fanYiBanGao },
@@ -790,8 +808,7 @@ var FAN_TABLE = [
     { name: '边张', fan: 1, check: fanBianZhang },
     { name: '坎张', fan: 1, check: fanKanZhang },
     { name: '单钓将', fan: 1, check: fanDanDiaoJiang },
-    { name: '自摸', fan: 1, check: fanZiMo },
-    { name: '暗杠', fan: 1, check: fanAnGang }
+    { name: '自摸', fan: 1, check: fanZiMo }
 ];
 
 // EXCLUSIONS: 每个番种"不计"的番种（按官方"不计"规则）
@@ -837,22 +854,25 @@ var EXCLUSIONS = {
     '推不倒': ['无字', '缺一门', '断幺'],
     '三色三同顺': ['喜相逢', '缺一门', '无字'],
     '三色三节高': ['缺一门'],
+    '妙手回春': ['自摸'],
+    '杠上开花': ['自摸'],
+    '抢杠和': ['和绝张'],
     '三色三步高': ['喜相逢', '缺一门'],
-    '碰碰和': ['断幺', '双同刻', '双暗刻'],
+    '碰碰和': [],
     '混一色': ['缺一门', '无字'],
     '五门齐': ['无字', '缺一门'],
-    '全求人': ['单钓将', '自摸', '门前清'],
+    '全求人': ['单钓将'],
     '双暗杠': ['暗杠', '双暗刻'],
     '双箭刻': ['箭刻'],
     '全带幺': ['断幺', '幺九刻'],
     '不求人': ['门前清', '自摸'],
     '双明杠': ['明杠'],
-    '和绝张': ['断幺', '坎张', '单钓将', '边张', '自摸'],
+    '和绝张': [],
     '箭刻': [],
     '圈风刻': [],
     '门风刻': [],
     '门前清': [],
-    '平和': ['断幺', '无字'],
+    '平和': ['无字'],
     '四归一': [],
     '双同刻': [],
     '双暗刻': [],
@@ -860,6 +880,13 @@ var EXCLUSIONS = {
 };
 
 function calculateFan(handCards, actionGroups, options, huResult) {
+    var scoringOptions = {};
+    var optionKeys = Object.keys(options || {});
+    for (var oi = 0; oi < optionKeys.length; oi++) {
+        scoringOptions[optionKeys[oi]] = options[optionKeys[oi]];
+    }
+    scoringOptions._onlyWinningTile = getOnlyWinningTile(handCards, actionGroups, scoringOptions.winTile);
+
     var decomps;
     if (huResult.special) {
         decomps = [{ pair: null, concealedSets: [], special: huResult.special }];
@@ -877,12 +904,12 @@ function calculateFan(handCards, actionGroups, options, huResult) {
     for (var i = 0; i < decomps.length; i++) {
         var allSets = huResult.special
             ? analyzeSpecial(huResult.special, handCards, actionGroups, huResult)
-            : analyzeDecomposition(decomps[i], actionGroups);
+            : analyzeDecomposition(decomps[i], actionGroups, scoringOptions);
 
         _log('calculateFan decomp#' + i + ': pair=' + (decomps[i].pair || (huResult.zhlPair || '-')) +
              ', allSets=[' + _allSetsSummary(allSets) + ']');
 
-        var matched = collectMatchedFans(allSets, handCards, actionGroups, options, huResult);
+        var matched = collectMatchedFans(allSets, handCards, actionGroups, scoringOptions, huResult);
         _log('calculateFan decomp#' + i + ' matched(' + Object.keys(matched).length + '): ' +
              _matchedSummary(matched));
 
@@ -920,8 +947,10 @@ function collectMatchedFans(allSets, handCards, actionGroups, options, huResult)
     for (var i = 0; i < FAN_TABLE.length; i++) {
         var rule = FAN_TABLE[i];
         try {
-            if (rule.check(allSets, handCards, actionGroups, options, huResult)) {
-                matched[rule.name] = rule.fan;
+            var checkResult = rule.check(allSets, handCards, actionGroups, options, huResult);
+            if (checkResult) {
+                var count = typeof checkResult === 'number' ? checkResult : 1;
+                matched[rule.name] = rule.fan * count;
             }
         } catch (e) {
             errorList.push(rule.name + ':' + (e && e.message ? e.message : String(e)));
@@ -1171,7 +1200,24 @@ function fanYiSeSiJieGao(allSets) {
 
 // --- 32番 ---
 
-// 一色四步高：同花色 4 副递增 1 的顺子
+function hasEvenStepSequence(values, needed, steps) {
+    var sorted = values.slice().sort(function (a, b) { return a - b; });
+    for (var start = 0; start <= sorted.length - needed; start++) {
+        for (var s = 0; s < steps.length; s++) {
+            var valid = true;
+            for (var offset = 1; offset < needed; offset++) {
+                if (sorted[start + offset] !== sorted[start] + steps[s] * offset) {
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid) return true;
+        }
+    }
+    return false;
+}
+
+// 一色四步高：同花色4副依次递增1或2的顺子。
 function fanYiSeSiBuGao(allSets) {
     var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
     var bySuit = {};
@@ -1180,14 +1226,7 @@ function fanYiSeSiBuGao(allSets) {
         bySuit[s.suit].push(s.start);
     });
     for (var suit in bySuit) {
-        var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
-        if (starts.length >= 4) {
-            for (var i = 0; i <= starts.length - 4; i++) {
-                if (starts[i + 1] === starts[i] + 1 &&
-                    starts[i + 2] === starts[i] + 2 &&
-                    starts[i + 3] === starts[i] + 3) return true;
-            }
-        }
+        if (hasEvenStepSequence(bySuit[suit], 4, [1, 2])) return true;
     }
     return false;
 }
@@ -1316,7 +1355,7 @@ function fanSanSeShuangLongHui(allSets) {
            bySuit[suits[1]].indexOf(1) !== -1 && bySuit[suits[1]].indexOf(7) !== -1;
 }
 
-// 一色三步高：同花色 3 副递增 1 的顺子
+// 一色三步高：同花色3副依次递增1或2的顺子。
 function fanYiSeSanBuGao(allSets) {
     var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
     var bySuit = {};
@@ -1325,23 +1364,18 @@ function fanYiSeSanBuGao(allSets) {
         bySuit[s.suit].push(s.start);
     });
     for (var suit in bySuit) {
-        var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
-        if (starts.length >= 3) {
-            for (var i = 0; i <= starts.length - 3; i++) {
-                if (starts[i + 1] === starts[i] + 1 && starts[i + 2] === starts[i] + 2) return true;
-            }
-        }
+        if (hasEvenStepSequence(bySuit[suit], 3, [1, 2])) return true;
     }
     return false;
 }
 
 // 全带五：每副面子都含 5
 function fanQuanDaiWu(allSets) {
-    var nonJiang = allSets.filter(function (s) {
-        return s.kind === 'kezi' || s.kind === 'shunzi';
+    var groups = allSets.filter(function (s) {
+        return s.kind === 'kezi' || s.kind === 'shunzi' || s.kind === 'jiang';
     });
-    if (nonJiang.length === 0) return false;
-    return nonJiang.every(function (s) {
+    if (groups.length !== 5) return false;
+    return groups.every(function (s) {
         return s.tiles.indexOf('5万') !== -1 ||
                s.tiles.indexOf('5条') !== -1 ||
                s.tiles.indexOf('5筒') !== -1;
@@ -1374,6 +1408,59 @@ function fanSanAnKe(allSets) {
 
 function fanQiXingBuKao(allSets, handCards, actionGroups, options, huResult) {
     return huResult.special === '七星不靠';
+}
+
+function makeTileByName(name) {
+    var parsed = parseName(name);
+    return {
+        id: name,
+        name: name,
+        type: parsed ? parsed.suit : '字',
+        value: parsed ? parsed.value : name,
+        image: ''
+    };
+}
+
+// 从和牌中移除和牌张，再枚举所有能完成结构的牌；只有唯一牌种时才可能计边、坎、钓。
+function getOnlyWinningTile(handCards, actionGroups, winTile) {
+    if (!winTile || !handCards || handCards.length === 0) return null;
+    var beforeWin = handCards.slice();
+    var removeIndex = -1;
+    for (var i = beforeWin.length - 1; i >= 0; i--) {
+        if (beforeWin[i].name === winTile) {
+            removeIndex = i;
+            break;
+        }
+    }
+    if (removeIndex < 0) return null;
+    beforeWin.splice(removeIndex, 1);
+
+    var visibleCounts = {};
+    beforeWin.forEach(function (tile) {
+        visibleCounts[tile.name] = (visibleCounts[tile.name] || 0) + 1;
+    });
+    (actionGroups || []).forEach(function (group) {
+        (group.cards || []).forEach(function (tile) {
+            visibleCounts[tile.name] = (visibleCounts[tile.name] || 0) + 1;
+        });
+    });
+
+    var waits = [];
+    var previousLogState = LOG_ENABLED;
+    LOG_ENABLED = false;
+    try {
+        for (var t = 0; t < ALL_TILE_NAMES.length; t++) {
+            var candidate = ALL_TILE_NAMES[t];
+            if ((visibleCounts[candidate] || 0) >= 4) continue;
+            if (checkHu(beforeWin.concat([makeTileByName(candidate)]), actionGroups).canHu) {
+                waits.push(candidate);
+                if (waits.length > 1) return null;
+            }
+        }
+    } finally {
+        LOG_ENABLED = previousLogState;
+    }
+    return waits.length === 1 ? waits[0] : null;
 }
 
 // 全双刻：四副刻子（杠）与将牌全部由2、4、6、8数牌组成。
@@ -1447,7 +1534,11 @@ function fanHuaLong(allSets) {
 
 // 推不倒
 function fanTuiBuDao(allSets) {
-    var ok = ['1条', '2条', '3条', '4条', '5条', '6条', '8条', '9条', '白', '发'];
+    var ok = [
+        '1筒', '2筒', '3筒', '4筒', '5筒', '8筒', '9筒',
+        '2条', '4条', '5条', '6条', '8条', '9条',
+        '白'
+    ];
     var tiles = getAllTilesFromSets(allSets);
     if (tiles.length === 0) return false;
     return tiles.every(function (t) { return ok.indexOf(t) !== -1; });
@@ -1562,9 +1653,13 @@ function fanWuMenQi(allSets) {
 }
 
 // 全求人：4 副操作组 + 单钓
-function fanQuanQiuRen(allSets, handCards, actionGroups) {
+function fanQuanQiuRen(allSets, handCards, actionGroups, options) {
+    if (options.zimo) return false;
     if (!actionGroups || actionGroups.length !== 4) return false;
     if (!handCards || handCards.length !== 2) return false;
+    for (var i = 0; i < actionGroups.length; i++) {
+        if (actionGroups[i].type === '暗杠') return false;
+    }
     return handCards[0].name === handCards[1].name;
 }
 
@@ -1597,7 +1692,9 @@ function fanQuanDaiYao(allSets) {
 
 // 不求人：无吃碰杠 + 自摸
 function fanBuQiuRen(allSets, handCards, actionGroups, options) {
-    if (actionGroups && actionGroups.length > 0) return false;
+    for (var i = 0; actionGroups && i < actionGroups.length; i++) {
+        if (actionGroups[i].type !== '暗杠') return false;
+    }
     return !!options.zimo;
 }
 
@@ -1650,38 +1747,28 @@ function fanMenQianQing(allSets, handCards, actionGroups) {
     return true;
 }
 
-// 平和：4 副顺子 + 1 对将，无字无幺九，无吃碰明杠
-function fanPingHe(allSets, handCards, actionGroups) {
-    if (actionGroups) {
-        for (var i = 0; i < actionGroups.length; i++) {
-            var t = actionGroups[i].type;
-            if (t === '吃' || t === '碰' || t === '明杠') return false;
-        }
-    }
+// 平和：4副顺子及序数牌作将；允许副露，边、坎、钓不影响成立。
+function fanPingHe(allSets) {
     var cnt = countSets(allSets);
     if (cnt.shunzi !== 4) return false;
     var jiang = allSets.filter(function (s) { return s.kind === 'jiang'; });
     if (jiang.length !== 1) return false;
-    if (YAOJIU_NAMES.indexOf(jiang[0].name) !== -1) return false;
-    var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
-    for (var i = 0; i < shunzi.length; i++) {
-        if (shunzi[i].start === 1 || shunzi[i].start === 7) return false;
-    }
-    return true;
+    return !!parseName(jiang[0].name);
 }
 
 // 四归一：同种牌 4 张分在面子里（非杠）
 function fanSiGuiYi(allSets) {
     var cnt = countTileByName(allSets);
+    var total = 0;
     for (var n in cnt) {
         if (cnt[n] === 4) {
             var inKong = allSets.filter(function (s) {
                 return s.isKong && s.tiles.indexOf(n) !== -1;
             });
-            if (inKong.length === 0) return true;
+            if (inKong.length === 0) total++;
         }
     }
-    return false;
+    return total;
 }
 
 // 双同刻：两种花色相同数值的刻子
@@ -1692,12 +1779,13 @@ function fanShuangTongKe(allSets) {
     var byVal = {};
     kezi.forEach(function (s) {
         if (!byVal[s.start]) byVal[s.start] = {};
-        byVal[s.start][s.suit] = true;
+        byVal[s.start][s.suit] = (byVal[s.start][s.suit] || 0) + 1;
     });
+    var total = 0;
     for (var v in byVal) {
-        if (Object.keys(byVal[v]).length >= 2) return true;
+        total += countCrossSuitPairs(byVal[v]);
     }
-    return false;
+    return total;
 }
 
 // 双暗刻
@@ -1718,13 +1806,14 @@ function fanDuanYao(allSets) {
 // 一般高：2 副相同顺子
 function fanYiBanGao(allSets) {
     var shunzi = allSets.filter(function (s) { return s.kind === 'shunzi'; });
-    var seen = {};
+    var counts = {};
     for (var i = 0; i < shunzi.length; i++) {
         var key = shunzi[i].suit + '_' + shunzi[i].start;
-        if (seen[key]) return true;
-        seen[key] = true;
+        counts[key] = (counts[key] || 0) + 1;
     }
-    return false;
+    var total = 0;
+    for (var key in counts) total += Math.floor(counts[key] / 2);
+    return total;
 }
 
 // 喜相逢：2 种花色相同顺子
@@ -1733,12 +1822,22 @@ function fanXiXiangFeng(allSets) {
     var byStart = {};
     shunzi.forEach(function (s) {
         if (!byStart[s.start]) byStart[s.start] = {};
-        byStart[s.start][s.suit] = true;
+        byStart[s.start][s.suit] = (byStart[s.start][s.suit] || 0) + 1;
     });
+    var total = 0;
     for (var v in byStart) {
-        if (Object.keys(byStart[v]).length >= 2) return true;
+        total += countCrossSuitPairs(byStart[v]);
     }
-    return false;
+    return total;
+}
+
+function countCrossSuitPairs(countsBySuit) {
+    var counts = Object.keys(countsBySuit).map(function (suit) {
+        return countsBySuit[suit];
+    });
+    var total = counts.reduce(function (sum, count) { return sum + count; }, 0);
+    var largest = counts.reduce(function (max, count) { return Math.max(max, count); }, 0);
+    return Math.min(Math.floor(total / 2), total - largest);
 }
 
 // 连六：同花色 2 副递增 3 的顺子（如 123 456）
@@ -1749,13 +1848,24 @@ function fanLianLiu(allSets) {
         if (!bySuit[s.suit]) bySuit[s.suit] = [];
         bySuit[s.suit].push(s.start);
     });
+    var total = 0;
     for (var suit in bySuit) {
         var starts = bySuit[suit].slice().sort(function (a, b) { return a - b; });
-        for (var i = 0; i < starts.length - 1; i++) {
-            if (starts[i + 1] === starts[i] + 3) return true;
+        var used = [];
+        for (var i = 0; i < starts.length; i++) used[i] = false;
+        for (var left = 0; left < starts.length; left++) {
+            if (used[left]) continue;
+            for (var right = left + 1; right < starts.length; right++) {
+                if (!used[right] && starts[right] === starts[left] + 3) {
+                    used[left] = true;
+                    used[right] = true;
+                    total++;
+                    break;
+                }
+            }
         }
     }
-    return false;
+    return total;
 }
 
 // 老少副：同花色 123 789
@@ -1766,16 +1876,31 @@ function fanLaoShaoFu(allSets) {
         if (!bySuit[s.suit]) bySuit[s.suit] = [];
         bySuit[s.suit].push(s.start);
     });
+    var total = 0;
     for (var suit in bySuit) {
-        if (bySuit[suit].indexOf(1) !== -1 && bySuit[suit].indexOf(7) !== -1) return true;
+        var ones = bySuit[suit].filter(function (start) { return start === 1; }).length;
+        var sevens = bySuit[suit].filter(function (start) { return start === 7; }).length;
+        total += Math.min(ones, sevens);
     }
-    return false;
+    return total;
 }
 
-// 幺九刻：含幺九牌的刻子
-function fanYaoJiuKe(allSets) {
+// 幺九刻：数牌1/9刻子，以及既非圈风也非门风的风刻；每副计1番。
+function fanYaoJiuKe(allSets, handCards, actionGroups, options) {
+    var roundWind = WINDS[options.roundWind || 0];
+    var seatWind = WINDS[options.seatWind || 0];
     var kezi = allSets.filter(function (s) { return s.kind === 'kezi'; });
-    return kezi.some(function (s) { return YAOJIU_NAMES.indexOf(s.name) !== -1; });
+    var total = 0;
+    kezi.forEach(function (set) {
+        var parsed = parseName(set.name);
+        if (parsed && (parsed.value === 1 || parsed.value === 9)) {
+            total++;
+        } else if (WINDS.indexOf(set.name) !== -1 &&
+                   set.name !== roundWind && set.name !== seatWind) {
+            total++;
+        }
+    });
+    return total;
 }
 
 // 明杠
@@ -1805,7 +1930,7 @@ function fanWuZi(allSets) {
 
 // 边张：胡顺子的边张（12->3 或 89->7）
 function fanBianZhang(allSets, handCards, actionGroups, options) {
-    if (!options.winTile) return false;
+    if (!options.winTile || options._onlyWinningTile !== options.winTile) return false;
     var win = options.winTile;
     var shunzi = allSets.filter(function (s) {
         return s.kind === 'shunzi' && s.tiles.indexOf(win) !== -1;
@@ -1818,7 +1943,7 @@ function fanBianZhang(allSets, handCards, actionGroups, options) {
 
 // 坎张：胡顺子的中间张
 function fanKanZhang(allSets, handCards, actionGroups, options) {
-    if (!options.winTile) return false;
+    if (!options.winTile || options._onlyWinningTile !== options.winTile) return false;
     var win = options.winTile;
     var p = parseName(win);
     if (!p) return false;
@@ -1830,7 +1955,7 @@ function fanKanZhang(allSets, handCards, actionGroups, options) {
 
 // 单钓将：胡的牌作将
 function fanDanDiaoJiang(allSets, handCards, actionGroups, options) {
-    if (!options.winTile) return false;
+    if (!options.winTile || options._onlyWinningTile !== options.winTile) return false;
     var win = options.winTile;
     var jiang = allSets.filter(function (s) {
         return s.kind === 'jiang' && s.name === win;
@@ -1844,7 +1969,7 @@ function fanZiMo(allSets, handCards, actionGroups, options) {
     return !!options.zimo;
 }
 
-// 暗杠
+// 暗杠（2番）
 function fanAnGang(allSets) {
     var cnt = countSets(allSets);
     return cnt.angang >= 1;
@@ -1852,5 +1977,14 @@ function fanAnGang(allSets) {
 
 module.exports = {
     calculateHu: calculateHu,
-    checkHu: checkHu
+    checkHu: checkHu,
+    getFanDefinitions: function () {
+        return FAN_TABLE.map(function (rule) {
+            return {
+                name: rule.name,
+                fan: rule.fan,
+                exclusions: (EXCLUSIONS[rule.name] || []).slice()
+            };
+        });
+    }
 };

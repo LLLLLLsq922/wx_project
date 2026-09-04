@@ -12,6 +12,7 @@ var registry = require('../core/ruleEngineRegistry.js');
 var schema = require('../data/schema.js');
 var storageService = require('../services/storageService.js');
 var guobiao = require('../rules/guobiao/engine.js');
+var legacyGuobiao = require('../util/mahjongUtil.js');
 
 function tile(name) {
     var value = parseInt(name, 10);
@@ -228,4 +229,40 @@ test('国标无花牌规则目录包含完整80项', function () {
     assert.ok(catalog.some(function (rule) { return rule.name === '七星不靠'; }));
     assert.ok(catalog.some(function (rule) { return rule.name === '全双刻'; }));
     assert.equal(catalog.some(function (rule) { return rule.name === '花牌'; }), false);
+});
+
+test('国标计算定义与规则百科的番值及不计关系保持一致', function () {
+    var engineDefinitions = legacyGuobiao.getFanDefinitions();
+    var catalog = guobiao.getRuleCatalog();
+    assert.equal(engineDefinitions.length, 80);
+    assert.equal(catalog.length, 80);
+
+    engineDefinitions.forEach(function (definition) {
+        var displayed = catalog.find(function (rule) { return rule.name === definition.name; });
+        assert.ok(displayed, '规则百科缺少：' + definition.name);
+        assert.equal(displayed.fan, definition.fan, definition.name + '番值不一致');
+        assert.deepEqual(
+            displayed.exclusions.slice().sort(),
+            definition.exclusions.slice().sort(),
+            definition.name + '不计关系不一致'
+        );
+    });
+});
+
+test('国标适配器拒绝自摸与荣和情境矛盾', function () {
+    var hand = [
+        'm1', 'm2', 'm3', 'm3', 'm4', 'm5', 's2',
+        's3', 's4', 'p6', 'p7', 'p8', 's5', 's5'
+    ];
+    var missingSelfDraw = guobiao.calculateWin({
+        concealedTiles: hand,
+        context: { miaoshouhuichun: true, winTile: '5条' }
+    });
+    assert.equal(missingSelfDraw.reason, 'SELF_DRAW_CONTEXT_REQUIRED');
+
+    var discardEventWithSelfDraw = guobiao.calculateWin({
+        concealedTiles: hand,
+        context: { zimo: true, haidilaoyue: true, winTile: '5条' }
+    });
+    assert.equal(discardEventWithSelfDraw.reason, 'DISCARD_WIN_CONTEXT_REQUIRED');
 });

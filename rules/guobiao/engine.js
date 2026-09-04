@@ -54,6 +54,16 @@ function validateInput(input) {
     if (counts.structural !== 14 || counts.physical !== counts.winningPhysicalTarget) {
         errors.push({ code: 'INVALID_WINNING_TILE_COUNT', details: counts });
     }
+    var context = normalized.context;
+    if ((context.miaoshouhuichun || context.gangshangkaihua) && !context.zimo) {
+        errors.push({ code: 'SELF_DRAW_CONTEXT_REQUIRED' });
+    }
+    if ((context.haidilaoyue || context.qiangganghu) && context.zimo) {
+        errors.push({ code: 'DISCARD_WIN_CONTEXT_REQUIRED' });
+    }
+    if (context.haidilaoyue && context.qiangganghu) {
+        errors.push({ code: 'CONFLICTING_WIN_CONTEXT' });
+    }
     return { valid: errors.length === 0, errors: errors, counts: counts };
 }
 

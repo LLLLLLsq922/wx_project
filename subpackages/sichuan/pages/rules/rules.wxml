@@ -1,0 +1,10 @@
+<view class="page-shell">
+  <view class="hero"><text class="eyebrow">成都地区常用规则</text><text class="page-title">川麻番种百科</text><text class="page-copy">共 {{rules.length}} 项结果 · 可按名称、说明或番数筛选</text></view>
+  <view class="search-box"><input value="{{searchText}}" placeholder="搜索牌型或成立条件" bindinput="onSearchInput" /><text wx:if="{{searchText}}" bindtap="clearSearch">×</text></view>
+  <view class="fan-filter"><view class="fan-pill {{selectedFan === item.value ? 'is-active' : ''}}" wx:for="{{fanOptions}}" wx:key="value" data-fan="{{item.value}}" bindtap="selectFan">{{item.label}}</view></view>
+  <view class="rule-card" wx:for="{{rules}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail" hover-class="card-pressed">
+    <view class="rule-head"><text class="rule-name">{{item.name}}</text><text class="fan-badge">{{item.fan}}番</text></view>
+    <text class="rule-copy">{{item.description}}</text><text class="detail-link">查看成立条件与不计关系 ›</text>
+  </view>
+  <view class="empty-card" wx:if="{{!rules.length}}">没有找到符合条件的川麻番种</view>
+</view>

@@ -1,0 +1,15 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 22rpx 22rpx 80rpx; overflow-x: hidden; background: linear-gradient(180deg,#dff2e7 0,#f4f7f5 360rpx); color: #19362b; }
+.hero-card,.section-card,.process-note { box-sizing: border-box; width: 100%; margin-bottom: 15rpx; padding: 24rpx; border-radius: 22rpx; background: rgba(255,255,255,.97); box-shadow: 0 8rpx 23rpx rgba(25,78,56,.06); }
+.fan-badge { display: inline-block; padding: 6rpx 14rpx; border-radius: 99rpx; background: #168a5b; color: #fff; font-size: 21rpx; font-weight: 700; }
+.page-title,.description,.section-title,.section-copy { display: block; }
+.page-title { margin-top: 12rpx; font-size: 41rpx; font-weight: 850; }
+.description { margin-top: 7rpx; color: #637a70; font-size: 23rpx; line-height: 1.55; }
+.section-title { font-size: 28rpx; font-weight: 780; }
+.section-copy { margin-top: 9rpx; color: #6e8279; font-size: 22rpx; line-height: 1.65; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 12rpx; }
+.tag { padding: 7rpx 12rpx; border-radius: 11rpx; background: #fff0df; color: #a56022; font-size: 20rpx; }
+.tile-list { display: flex; flex-wrap: wrap; margin-top: 13rpx; }
+.tile { width: 64rpx; margin: 3rpx; text-align: center; }
+.tile image { width: 64rpx; height: 85rpx; }
+.tile text { display: block; margin-top: 2rpx; color: #7d8d86; font-size: 15rpx; }
+.process-note { color: #74877f; font-size: 21rpx; line-height: 1.55; text-align: center; }

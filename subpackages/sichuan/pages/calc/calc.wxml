@@ -21,7 +21,7 @@ module.exports.tileName = tileName;
       <view class="result-heading"><text class="result-status">可以和牌</text><text class="total-fan">{{result.totalFan}}番</text></view>
       <text class="pattern-name">{{result.selectedCandidate.pattern}}</text>
       <view class="fan-list">
-        <view class="fan-chip" wx:for="{{result.fanList}}" wx:key="name"><text>{{item.name}}</text><text>{{item.fan}}番</text></view>
+        <view class="fan-chip" wx:for="{{result.items}}" wx:key="id" data-id="{{item.id}}" bindtap="openRule" hover-class="tile-pressed"><text>{{item.name}}</text><text>{{item.value}}番 · 查看规则 ›</text></view>
       </view>
       <view class="alternative-list" wx:if="{{result.alternatives.length}}">
         <text class="subheading">其他可行拆分</text>

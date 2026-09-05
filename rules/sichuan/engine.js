@@ -34,7 +34,6 @@ var RULE_CATALOG = [
     { id: 'qinglongqidui', name: '清龙七对', fan: 5 },
     { id: 'qingjingoudiao', name: '清金钩钓', fan: 3 },
     { id: 'qingyaojiu', name: '清幺九', fan: 4 },
-    { id: 'qingjiangdui', name: '清将对', fan: 5 },
     { id: 'shibaluohan', name: '十八罗汉', fan: 5, ruleFlag: 'shibaluohanEnabled' },
     { id: 'qingshibaluohan', name: '清十八罗汉', fan: 7, ruleFlag: 'shibaluohanEnabled' },
     { id: 'tianhu', name: '天胡', fan: 5 },
@@ -347,9 +346,6 @@ function scoreCandidate(candidate, normalized, rules) {
         if (allKongs && rules.shibaluohanEnabled) {
             addItem(items, qing ? 'qingshibaluohan' : 'shibaluohan',
                 qing ? '清十八罗汉' : '十八罗汉', qing ? 7 : 5);
-        } else if (qing && jiangdui) {
-            addItem(items, 'qingjiangdui', '清将对', 5);
-            containsZhongzhang = true;
         } else if (jiangdui) {
             addItem(items, 'jiangdui', '将对', 3);
             containsZhongzhang = true;

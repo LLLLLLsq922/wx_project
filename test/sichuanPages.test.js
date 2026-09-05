@@ -45,7 +45,7 @@ function pageContext(definition) {
 
 test('川麻页面均限制横向溢出并提供创建、总分和当前局关键信息', function () {
     var root = path.join(__dirname, '..', 'subpackages', 'sichuan', 'pages');
-    ['create', 'matches', 'match', 'round', 'result'].forEach(function (name) {
+    ['create', 'matches', 'match', 'round', 'result', 'history', 'rules', 'rule-detail'].forEach(function (name) {
         var wxss = fs.readFileSync(path.join(root, name, name + '.wxss'), 'utf8');
         assert.match(wxss, /\.page-shell\s*\{[^}]*overflow-x:\s*hidden/s);
     });

@@ -1,0 +1,11 @@
+<view class="page-shell">
+  <view class="hero"><text class="page-title">川麻历史记录</text><text class="page-copy">整场结果仅保存在当前手机</text></view>
+  <view class="search-box"><input value="{{searchText}}" placeholder="搜索玩家或玩法" bindinput="onSearchInput" /><text wx:if="{{searchText}}" bindtap="clearSearch">×</text></view>
+  <view class="history-card" wx:for="{{matches}}" wx:key="id" data-id="{{item.id}}" bindtap="openMatch" hover-class="card-pressed">
+    <view class="card-head"><text class="mode-pill">{{item.modeLabel}}</text><text class="date">{{item.completedAt}}</text></view>
+    <text class="players">{{item.playerNames}}</text>
+    <view class="rankings"><view class="ranking" wx:for="{{item.rankings}}" wx:key="playerId" wx:for-item="rank"><text>{{rank.rank}}. {{rank.name}}</text><text class="score {{rank.score < 0 ? 'is-negative' : ''}}">{{rank.score > 0 ? '+' : ''}}{{rank.score}}</text></view></view>
+    <text class="meta">共 {{item.roundCount}} 局 · 点击查看每局详情 ›</text>
+  </view>
+  <view class="empty-card" wx:if="{{!matches.length}}"><text>{{searchText ? '没有匹配的历史牌局' : '还没有已结束的川麻牌局'}}</text></view>
+</view>

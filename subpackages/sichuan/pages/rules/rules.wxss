@@ -1,0 +1,20 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 24rpx 22rpx 80rpx; overflow-x: hidden; background: #f4f7f5; color: #19362b; }
+.hero { padding: 12rpx 4rpx 20rpx; }
+.eyebrow,.page-title,.page-copy,.rule-name,.rule-copy,.detail-link { display: block; }
+.eyebrow { color: #15835a; font-size: 20rpx; font-weight: 700; }
+.page-title { margin-top: 3rpx; font-size: 39rpx; font-weight: 850; }
+.page-copy { margin-top: 4rpx; color: #7b8e86; font-size: 21rpx; }
+.search-box { display: flex; align-items: center; margin-bottom: 13rpx; padding: 0 18rpx; border-radius: 18rpx; background: #fff; box-shadow: 0 7rpx 20rpx rgba(25,78,56,.06); }
+.search-box input { flex: 1; height: 78rpx; font-size: 23rpx; }
+.search-box text { padding: 10rpx; color: #82928c; font-size: 29rpx; }
+.fan-filter { display: flex; flex-wrap: wrap; gap: 7rpx; margin-bottom: 15rpx; }
+.fan-pill { padding: 8rpx 15rpx; border-radius: 99rpx; background: #e8eeeb; color: #667b72; font-size: 20rpx; }
+.fan-pill.is-active { background: #168a5b; color: #fff; font-weight: 700; }
+.rule-card,.empty-card { box-sizing: border-box; width: 100%; margin-bottom: 12rpx; padding: 21rpx; border-radius: 20rpx; background: #fff; box-shadow: 0 7rpx 21rpx rgba(25,78,56,.055); }
+.rule-head { display: flex; align-items: center; justify-content: space-between; }
+.rule-name { font-size: 28rpx; font-weight: 780; }
+.fan-badge { padding: 5rpx 11rpx; border-radius: 99rpx; background: #e4f5ec; color: #138158; font-size: 20rpx; font-weight: 700; }
+.rule-copy { margin-top: 7rpx; color: #6f827a; font-size: 21rpx; line-height: 1.5; }
+.detail-link { margin-top: 10rpx; color: #168a5b; font-size: 19rpx; }
+.card-pressed { opacity: .84; transform: scale(.99); }
+.empty-card { padding: 55rpx 20rpx; color: #8a9993; text-align: center; }

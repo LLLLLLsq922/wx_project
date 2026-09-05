@@ -36,7 +36,8 @@ function testWx(calls) {
         removeStorageSync: function (key) { delete values[key]; },
         showToast: function (options) { calls.push(['toast', options.title]); },
         showModal: function (options) { options.success({ confirm: true }); },
-        vibrateShort: function () { calls.push(['vibrate']); }
+        vibrateShort: function () { calls.push(['vibrate']); },
+        navigateTo: function (options) { calls.push(['navigate', options.url]); }
     };
 }
 
@@ -126,4 +127,12 @@ test('川麻快速算牌恢复副露草稿并允许一键清空', function () {
     assert.deepEqual(page.data.concealedTiles, []);
     assert.deepEqual(page.data.melds, []);
     assert.equal(context.app.globalData.localData.quickCalcDrafts.sichuan.concealedTiles.length, 0);
+});
+
+test('川麻快速算牌可从最高番结果进入命中规则详情', function () {
+    var context = setup();
+    context.page.openRule({ currentTarget: { dataset: { id: 'qingdui' } } });
+    assert.deepEqual(context.calls, [
+        ['navigate', '/subpackages/sichuan/pages/rule-detail/rule-detail?id=qingdui']
+    ]);
 });

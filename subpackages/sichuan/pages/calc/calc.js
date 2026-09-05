@@ -332,6 +332,15 @@ Page({
         if (!result.canWin) wx.showToast({ title: resultMessage(result.reason), icon: 'none' });
     },
 
+    openRule: function (event) {
+        var ruleId = event.currentTarget.dataset.id;
+        if (!ruleId) return;
+        wx.navigateTo({
+            url: '/subpackages/sichuan/pages/rule-detail/rule-detail?id=' +
+                encodeURIComponent(ruleId)
+        });
+    },
+
     clearDraftNow: function () {
         var draft = emptyDraft();
         this.setData({

@@ -32,7 +32,8 @@ function errorCodes(result) {
 test('川麻规则目录公开基础番种和可配置番种', function () {
     assert.equal(ruleEngines.requireEngine('sichuan'), sichuan);
     var catalog = sichuan.getRuleCatalog();
-    assert.equal(catalog.length, 25);
+    assert.equal(catalog.length, 24);
+    assert.equal(catalog.some(function (item) { return item.id === 'qingjiangdui'; }), false);
     assert.equal(catalog.find(function (item) { return item.id === 'pinghu'; }).fan, 0);
     assert.equal(catalog.find(function (item) { return item.id === 'gen'; }).repeatable, true);
     assert.equal(catalog.find(function (item) { return item.id === 'shibaluohan'; }).enabled, true);

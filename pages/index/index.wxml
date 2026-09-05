@@ -72,7 +72,7 @@
   </view>
 
   <view class="phase-note" wx:if="{{selectedVariant !== 'guobiao'}}">
-    <text wx:if="{{selectedVariant === 'sichuan'}}">成都川麻已开放快速算牌、创建牌局与完整局内结算。</text>
+    <text wx:if="{{selectedVariant === 'sichuan'}}">成都川麻已开放算牌、完整牌局结算、历史记录与规则百科。</text>
     <text wx:else>四人日麻正在按阶段接入；当前版本可先浏览整体入口。</text>
   </view>
 </view>

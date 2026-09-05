@@ -21,7 +21,10 @@
           "pages/matches/matches",
           "pages/match/match",
           "pages/round/round",
-          "pages/result/result"
+          "pages/result/result",
+          "pages/history/history",
+          "pages/rules/rules",
+          "pages/rule-detail/rule-detail"
         ]
       }
     ],

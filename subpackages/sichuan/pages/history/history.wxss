@@ -1,0 +1,21 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 25rpx 23rpx 80rpx; overflow-x: hidden; background: #f4f7f5; color: #19362b; }
+.hero { padding: 9rpx 3rpx 20rpx; }
+.page-title,.page-copy,.players,.meta { display: block; }
+.page-title { font-size: 39rpx; font-weight: 850; }
+.page-copy { margin-top: 3rpx; color: #7d9088; font-size: 21rpx; }
+.search-box { display: flex; align-items: center; margin-bottom: 15rpx; padding: 0 18rpx; border-radius: 18rpx; background: #fff; }
+.search-box input { flex: 1; height: 78rpx; font-size: 23rpx; }
+.search-box text { padding: 10rpx; color: #84948e; font-size: 29rpx; }
+.history-card,.empty-card { box-sizing: border-box; width: 100%; margin-bottom: 14rpx; padding: 23rpx; border-radius: 21rpx; background: #fff; box-shadow: 0 8rpx 22rpx rgba(25,78,56,.06); }
+.card-head,.ranking { display: flex; align-items: center; justify-content: space-between; }
+.mode-pill { padding: 5rpx 13rpx; border-radius: 99rpx; background: #e4f5ec; color: #148159; font-size: 20rpx; font-weight: 700; }
+.date { color: #8a9993; font-size: 18rpx; }
+.players { margin-top: 15rpx; font-size: 26rpx; font-weight: 730; }
+.rankings { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7rpx 18rpx; margin-top: 14rpx; padding: 12rpx; border-radius: 14rpx; background: #f3f7f5; }
+.ranking { min-width: 0; color: #60776d; font-size: 19rpx; }
+.ranking text:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score { color: #168a5b; font-weight: 750; }
+.score.is-negative { color: #d1594f; }
+.meta { margin-top: 12rpx; color: #7f9189; font-size: 19rpx; }
+.empty-card { padding: 65rpx 20rpx; color: #87968f; text-align: center; }
+.card-pressed { opacity: .85; transform: scale(.99); }

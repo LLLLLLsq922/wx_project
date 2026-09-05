@@ -1,0 +1,8 @@
+<view class="page-shell" wx:if="{{rule}}">
+  <view class="hero-card"><text class="fan-badge">{{rule.fan}}番</text><text class="page-title">{{rule.name}}</text><text class="description">{{rule.description}}</text></view>
+  <view class="section-card"><text class="section-title">成立条件</text><text class="section-copy">{{rule.formation}}</text></view>
+  <view class="section-card"><text class="section-title">不成立情况</text><text class="section-copy">{{rule.notMet}}</text></view>
+  <view class="section-card"><text class="section-title">不重复计算</text><view class="tag-list" wx:if="{{rule.exclusions.length}}"><text class="tag" wx:for="{{rule.exclusions}}" wx:key="*this">{{item}}</text></view><text class="section-copy" wx:else>没有额外的不计项目，按实际命中的其他番种复合。</text></view>
+  <view class="section-card" wx:if="{{exampleTiles.length}}"><text class="section-title">牌面示例</text><view class="tile-list"><view class="tile" wx:for="{{exampleTiles}}" wx:key="index"><image src="{{item.image}}" mode="aspectFit" /><text>{{item.name}}</text></view></view></view>
+  <view class="process-note" wx:if="{{!exampleTiles.length}}">该项目依赖副露或实际牌局过程，应以牌局记录为准。</view>
+</view>

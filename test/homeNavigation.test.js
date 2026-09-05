@@ -75,7 +75,24 @@ test('川麻创建与继续牌局入口进入川麻分包', function () {
     ]);
 });
 
-test('app配置包含川麻算牌、创建、列表、总览和局内录入页面', function () {
+test('川麻历史与规则入口进入对应分包，国标规则仍切换主包标签页', function () {
+    var calls = [];
+    global.wx = {
+        navigateTo: function (options) { calls.push(['navigateTo', options.url]); },
+        switchTab: function (options) { calls.push(['switchTab', options.url]); }
+    };
+
+    pageDefinition.openHistory.call({ data: { selectedVariant: 'sichuan' } });
+    pageDefinition.openRules.call({ data: { selectedVariant: 'sichuan' } });
+    pageDefinition.openRules.call({ data: { selectedVariant: 'guobiao' } });
+    assert.deepEqual(calls, [
+        ['navigateTo', '/subpackages/sichuan/pages/history/history'],
+        ['navigateTo', '/subpackages/sichuan/pages/rules/rules'],
+        ['switchTab', '/pages/rules/rules']
+    ]);
+});
+
+test('app配置包含川麻算牌、牌局、历史和规则页面', function () {
     var appConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
     var sichuan = appConfig.subpackages.find(function (subpackage) {
         return subpackage.name === 'sichuan';
@@ -86,6 +103,9 @@ test('app配置包含川麻算牌、创建、列表、总览和局内录入页�
         'pages/matches/matches',
         'pages/match/match',
         'pages/round/round',
-        'pages/result/result'
+        'pages/result/result',
+        'pages/history/history',
+        'pages/rules/rules',
+        'pages/rule-detail/rule-detail'
     ]);
 });

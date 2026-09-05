@@ -111,12 +111,20 @@ Page({
     },
 
     openHistory: function () {
+        if (this.data.selectedVariant === variants.VARIANTS.SICHUAN) {
+            wx.navigateTo({ url: '/subpackages/sichuan/pages/history/history' });
+            return;
+        }
         this.showPending(this.data.historyCount ? '历史记录' : '暂无历史记录');
     },
 
     openRules: function () {
         if (this.data.selectedVariant === variants.VARIANTS.GUOBIAO) {
             wx.switchTab({ url: '/pages/rules/rules' });
+            return;
+        }
+        if (this.data.selectedVariant === variants.VARIANTS.SICHUAN) {
+            wx.navigateTo({ url: '/subpackages/sichuan/pages/rules/rules' });
             return;
         }
         this.showPending('规则百科');

@@ -3,6 +3,7 @@
 var tiles = require('../../core/tiles.js');
 var ledger = require('../../core/ledger.js');
 var settlement = require('./settlement.js');
+var terminalSettlement = require('./terminalSettlement.js');
 
 var MODES = {
     NORMAL: 'normal',
@@ -21,7 +22,10 @@ var DEFAULT_RULES = {
     huansanzhangEnabled: true,
     dingqueEnabled: true,
     baseScore: 1,
-    selfDrawMode: 'addBase'
+    selfDrawMode: 'addBase',
+    huazhuEnabled: true,
+    dajiaoEnabled: true,
+    taxRefundEnabled: true
 };
 
 function roundError(code, message) {
@@ -325,10 +329,31 @@ function recordKong(state, event) {
     return next;
 }
 
-function recordWallExhausted(state) {
+function recordWallExhausted(state, terminalInput) {
     assertPhase(state, 'play');
     var next = clone(state);
-    next.events.push({ type: 'wallExhausted' });
+    terminalInput = terminalInput || {};
+    var eventId = terminalInput.id || next.id + '-wall-exhausted';
+    var terminalResult = terminalSettlement.settleExhaustiveDraw({
+        eventId: eventId,
+        participantIds: next.participantIds,
+        winnerIds: next.winnerIds,
+        huazhuPlayerIds: terminalInput.huazhuPlayerIds,
+        dajiaoResults: terminalInput.dajiaoResults,
+        kongTransactions: next.transactions,
+        wallExhausted: true
+    }, next.rules);
+    next.transactions = next.transactions.concat(terminalResult.transactions);
+    next.events.push({
+        id: eventId,
+        type: 'wallExhausted',
+        huazhuPlayerIds: terminalResult.huazhuPlayerIds,
+        dajiaoResults: terminalResult.dajiaoResults,
+        transactionIds: terminalResult.transactions.map(function (transaction) {
+            return transaction.id;
+        })
+    });
+    refreshChanges(next);
     endRound(next, 'wallExhausted');
     return next;
 }

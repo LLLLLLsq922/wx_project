@@ -12,7 +12,10 @@ function noSetupRules(extra) {
         huansanzhangEnabled: false,
         dingqueEnabled: false,
         baseScore: 1,
-        selfDrawMode: 'addBase'
+        selfDrawMode: 'addBase',
+        huazhuEnabled: false,
+        dajiaoEnabled: false,
+        taxRefundEnabled: false
     };
     Object.keys(extra || {}).forEach(function (key) { rules[key] = extra[key]; });
     return rules;
@@ -248,4 +251,39 @@ test('血流成河每次和牌都必须保存完整牌面快照', function () {
 test('无和牌流局时保持本局庄家', function () {
     var ended = roundState.recordWallExhausted(createRound(roundState.MODES.NORMAL));
     assert.equal(ended.nextDealerSuggestion, 'p1');
+});
+
+test('牌墙耗尽把花猪、大叫和退税交易接入本局事件与累计得分', function () {
+    var state = createRound(roundState.MODES.BLOOD_BATTLE, {
+        rules: noSetupRules({
+            huazhuEnabled: true,
+            dajiaoEnabled: true,
+            taxRefundEnabled: true
+        })
+    });
+    state = roundState.recordKong(state, {
+        id: 'kong-before-draw',
+        actorId: 'p3',
+        sourcePlayerId: 'p1',
+        kongType: 'directKong'
+    });
+    state = roundState.recordWallExhausted(state, {
+        id: 'draw-1',
+        huazhuPlayerIds: ['p4'],
+        dajiaoResults: [
+            { playerId: 'p1', isReady: true, maxFan: 1 },
+            { playerId: 'p2', isReady: true, maxFan: 2 },
+            { playerId: 'p3', isReady: false }
+        ]
+    });
+
+    assert.equal(state.ended, true);
+    assert.equal(state.events[state.events.length - 1].type, 'wallExhausted');
+    assert.deepEqual(state.transactions.map(function (transaction) { return transaction.type; }), [
+        'kong', 'huazhu', 'dajiao', 'taxRefund'
+    ]);
+    assert.equal(Object.keys(state.scoreChanges).reduce(function (sum, playerId) {
+        return sum + state.scoreChanges[playerId];
+    }, 0), 0);
+    assert.equal(state.nextDealerSuggestion, 'p1');
 });

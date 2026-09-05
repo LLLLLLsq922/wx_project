@@ -4,6 +4,7 @@ var tiles = require('../../core/tiles.js');
 var variants = require('../../core/variants.js');
 var settlement = require('./settlement.js');
 var roundState = require('./roundState.js');
+var terminalSettlement = require('./terminalSettlement.js');
 
 var DEFAULT_RULES = {
     dingqueEnabled: true,
@@ -12,7 +13,10 @@ var DEFAULT_RULES = {
     shibaluohanEnabled: true,
     eventFansEnabled: true,
     selfDrawMode: 'addBase',
-    baseScore: 1
+    baseScore: 1,
+    huazhuEnabled: true,
+    dajiaoEnabled: true,
+    taxRefundEnabled: true
 };
 
 var RULE_CATALOG = [
@@ -489,6 +493,106 @@ function analyzeWaits(input, rules) {
     return waits;
 }
 
+function analyzeTheoreticalDajiao(input, rules) {
+    var normalized = normalizeInput(input);
+    var staticContext = {};
+    if (normalized.context.dingqueSuit !== undefined) {
+        staticContext.dingqueSuit = normalized.context.dingqueSuit;
+    }
+    var staticInput = {
+        concealedTiles: normalized.concealedTiles,
+        melds: normalized.melds,
+        visibleTiles: normalized.visibleTiles,
+        context: staticContext,
+        rules: mergeRules(input, rules)
+    };
+    var validation = validateInputInternal(staticInput, rules, 'waiting');
+    if (!validation.valid) {
+        return {
+            valid: false,
+            isReady: false,
+            maxFan: null,
+            highestWaits: [],
+            waits: [],
+            errors: validation.errors
+        };
+    }
+    var waits = analyzeWaits(staticInput, rules);
+    var maxFan = null;
+    waits.forEach(function (wait) {
+        if (maxFan === null || wait.result.totalFan > maxFan) maxFan = wait.result.totalFan;
+    });
+    return {
+        valid: true,
+        isReady: waits.length > 0,
+        maxFan: maxFan,
+        highestWaits: maxFan === null ? [] : waits.filter(function (wait) {
+            return wait.result.totalFan === maxFan;
+        }),
+        waits: waits,
+        errors: []
+    };
+}
+
+function analyzeExhaustivePlayer(input, rules) {
+    input = input || {};
+    var normalized = normalizeInput(input);
+    var resolvedRules = mergeRules(input, rules);
+    var structuralRules = mergeRules(input, rules);
+    structuralRules.dingqueEnabled = false;
+    var structuralInput = {
+        concealedTiles: normalized.concealedTiles,
+        melds: normalized.melds,
+        visibleTiles: normalized.visibleTiles,
+        context: {},
+        rules: structuralRules
+    };
+    var validation = validateInputInternal(structuralInput, structuralRules, 'waiting');
+    if (!validation.valid) {
+        return {
+            valid: false,
+            isHuazhu: false,
+            isReady: false,
+            maxFan: null,
+            highestWaits: [],
+            waits: [],
+            errors: validation.errors
+        };
+    }
+
+    var dingqueSuit = normalized.context.dingqueSuit;
+    if (resolvedRules.dingqueEnabled && ['m', 's', 'p'].indexOf(dingqueSuit) === -1) {
+        return {
+            valid: false,
+            isHuazhu: false,
+            isReady: false,
+            maxFan: null,
+            highestWaits: [],
+            waits: [],
+            errors: [{ code: dingqueSuit ? 'INVALID_DINGQUE_SUIT' : 'MISSING_DINGQUE_SUIT' }]
+        };
+    }
+
+    var hasDingqueTiles = resolvedRules.dingqueEnabled && allHeldTiles(normalized).some(function (tileId) {
+        return tileId.charAt(0) === dingqueSuit;
+    });
+    if (hasDingqueTiles) {
+        return {
+            valid: true,
+            isHuazhu: resolvedRules.huazhuEnabled !== false,
+            isReady: false,
+            maxFan: null,
+            highestWaits: [],
+            waits: [],
+            errors: []
+        };
+    }
+
+    var dajiao = analyzeTheoreticalDajiao(input, rules);
+    dajiao.isHuazhu = false;
+    return dajiao;
+}
+
 function getRuleCatalog(rules) {
     var resolvedRules = mergeRules(null, rules);
     return RULE_CATALOG.map(function (rule) {
@@ -508,6 +612,8 @@ module.exports = {
     validateInput: validateInput,
     calculateWin: calculateWin,
     analyzeWaits: analyzeWaits,
+    analyzeTheoreticalDajiao: analyzeTheoreticalDajiao,
+    analyzeExhaustivePlayer: analyzeExhaustivePlayer,
     getRuleCatalog: getRuleCatalog,
     settleWinEvent: settlement.settleWinEvent,
     createKongTransaction: settlement.createKongTransaction,
@@ -516,5 +622,6 @@ module.exports = {
     recordDingque: roundState.recordDingque,
     recordWin: roundState.recordWin,
     recordKong: roundState.recordKong,
-    recordWallExhausted: roundState.recordWallExhausted
+    recordWallExhausted: roundState.recordWallExhausted,
+    settleExhaustiveDraw: terminalSettlement.settleExhaustiveDraw
 };

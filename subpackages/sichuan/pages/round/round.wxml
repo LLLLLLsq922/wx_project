@@ -185,6 +185,10 @@ module.exports.contains = contains;
       <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'addedKong'}}"><text>被抢杠</text><switch checked="{{kongRobbed}}" bindchange="onKongRobbedChange" color="#168a5b" /></view>
       <button class="primary-button form-submit" bindtap="submitKong">确认记录杠牌</button>
     </view>
+    <view class="operation-card" wx:if="{{eventRows.length}}">
+      <text class="section-title">本局事件</text>
+      <view class="event-row" wx:for="{{eventRows}}" wx:key="id"><text class="event-index">{{item.index}}</text><view><text class="event-title">{{item.title}}</text><text class="event-detail">{{item.detail}}</text></view></view>
+    </view>
   </block>
 
   <block wx:elif="{{round.phase === 'ended'}}">
@@ -198,6 +202,13 @@ module.exports.contains = contains;
       <text class="end-mark">本局完成</text>
       <text class="section-title">{{round.endReason === 'wallExhausted' ? '牌墙耗尽' : '和牌结算完成'}}</text>
       <text class="section-copy">确认后将本局分数计入整场，并根据首个和牌事件自动确定下一庄。</text>
+      <view class="dealer-correction">
+        <text>下一庄{{dealerOverrideChanged ? '（已人工调整）' : '（自动建议）'}}</text>
+        <picker range="{{match.players}}" range-key="name" value="{{nextDealerIndex}}" bindchange="onNextDealerChange"><view class="picker-value">{{match.players[nextDealerIndex].name}} ›</view></picker>
+      </view>
+      <view class="ended-events" wx:if="{{eventRows.length}}">
+        <view class="event-row" wx:for="{{eventRows}}" wx:key="id"><text class="event-index">{{item.index}}</text><view><text class="event-title">{{item.title}}</text><text class="event-detail">{{item.detail}}</text></view></view>
+      </view>
       <button class="primary-button form-submit" bindtap="commitEndedRound">确认结果并计入整场</button>
     </view>
   </block>

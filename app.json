@@ -20,7 +20,8 @@
           "pages/create/create",
           "pages/matches/matches",
           "pages/match/match",
-          "pages/round/round"
+          "pages/round/round",
+          "pages/result/result"
         ]
       }
     ],

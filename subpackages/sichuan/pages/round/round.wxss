@@ -92,3 +92,11 @@
 .wall-player-tabs { margin-top: 18rpx; }
 .terminal-rule-note { display: flex; justify-content: space-between; gap: 8rpx; margin-top: 15rpx; color: #6d8179; font-size: 19rpx; }
 .terminal-rule-note text { flex: 1; padding: 9rpx 4rpx; border-radius: 11rpx; background: #f0f4f2; text-align: center; }
+.event-row { display: flex; padding: 13rpx 0; border-top: 1rpx solid #edf1ef; text-align: left; }
+.event-index { width: 37rpx; height: 37rpx; margin-right: 10rpx; border-radius: 50%; background: #e6f5ed; color: #15835a; font-size: 18rpx; font-weight: 750; line-height: 37rpx; text-align: center; flex-shrink: 0; }
+.event-row > view { min-width: 0; }
+.event-title, .event-detail { display: block; }
+.event-title { font-size: 22rpx; font-weight: 700; }
+.event-detail { margin-top: 3rpx; color: #788b83; font-size: 18rpx; line-height: 1.45; }
+.dealer-correction { display: flex; align-items: center; justify-content: space-between; min-height: 78rpx; margin-top: 16rpx; padding: 0 15rpx; border-radius: 15rpx; background: #f3f7f5; font-size: 22rpx; text-align: left; }
+.ended-events { margin-top: 12rpx; }

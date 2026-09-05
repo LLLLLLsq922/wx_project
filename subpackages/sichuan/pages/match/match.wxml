@@ -20,11 +20,13 @@
   <view class="history-card">
     <text class="section-title">已完成牌局</text>
     <text class="empty-copy" wx:if="{{!match.rounds.length}}">尚未完成第一局</text>
-    <view class="round-row" wx:for="{{match.rounds}}" wx:key="id">
+    <view class="round-row" wx:for="{{match.rounds}}" wx:key="id" data-index="{{index}}" bindtap="openRoundDetail" hover-class="round-pressed">
       <text>第{{index + 1}}局 · {{item.endReason === 'wallExhausted' ? '牌墙耗尽' : '和牌结束'}}</text>
-      <text class="round-next">下一庄 {{item.nextDealerId}}</text>
+      <text class="round-next">查看详情 ›</text>
     </view>
   </view>
 
-  <button class="start-button" bindtap="startNextRound">{{hasCurrentRound ? '继续当前局' : '开始下一局'}}</button>
+  <button class="start-button" wx:if="{{match.status === 'active'}}" bindtap="startNextRound">{{hasCurrentRound ? '继续当前局' : '开始下一局'}}</button>
+  <button class="end-button" wx:if="{{canManualEnd}}" bindtap="endUnlimitedMatch">结束整场牌局</button>
+  <view class="completed-note" wx:if="{{match.status === 'completed'}}">整场已结束 · 结果已保存在本机历史记录</view>
 </view>

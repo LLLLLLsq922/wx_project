@@ -5,6 +5,7 @@ var sichuanEngine = require('../../../../rules/sichuan/engine.js');
 var roundState = require('../../../../rules/sichuan/roundState.js');
 var matchState = require('../../../../rules/sichuan/matchState.js');
 var matchService = require('../../../../services/matchService.js');
+var resultPresenter = require('../../../../services/sichuanResultPresenter.js');
 
 function phaseLabel(phase) {
     if (phase === 'exchange') return '换三张';
@@ -143,6 +144,9 @@ Page({
         dingqueSuits: {},
         activePlayers: [],
         roundScoreRows: [],
+        eventRows: [],
+        nextDealerIndex: 0,
+        dealerOverrideChanged: false,
         showWinForm: false,
         winIsSelfDraw: false,
         winDiscarderIndex: 0,
@@ -247,6 +251,9 @@ Page({
         var match = found.match;
         var round = match.currentRound;
         var dealer = match.players.find(function (player) { return player.id === round.dealerId; });
+        var suggestedDealerIndex = match.players.findIndex(function (player) {
+            return player.id === round.nextDealerSuggestion;
+        });
         var draft = round.inputDraft || {};
         var selections = draft.exchangeSelections || emptySelections(match.players);
         var dingqueSuits = draft.dingqueSuits || {};
@@ -272,6 +279,9 @@ Page({
             dingqueSuits: clone(dingqueSuits),
             activePlayers: playersInRound(match, round),
             roundScoreRows: scoreRows(match, round),
+            eventRows: resultPresenter.eventRows(match, round),
+            nextDealerIndex: suggestedDealerIndex === -1 ? 0 : suggestedDealerIndex,
+            dealerOverrideChanged: false,
             showWinForm: !!savedWin.open,
             winIsSelfDraw: !!savedWin.isSelfDraw,
             winDiscarderIndex: savedWin.discarderIndex || 0,
@@ -298,12 +308,22 @@ Page({
             wx, app.globalData.localData, this.data.matchId, round
         );
         var found = matchService.findMatch(app.globalData.localData, this.data.matchId);
+        var suggestedIndex = found.match.players.findIndex(function (player) {
+            return player.id === found.match.currentRound.nextDealerSuggestion;
+        });
+        var dealerUpdate = {};
+        if (found.match.currentRound.ended && !this.data.dealerOverrideChanged) {
+            dealerUpdate.nextDealerIndex = suggestedIndex === -1 ? 0 : suggestedIndex;
+        }
         this.setData({
             match: found.match,
             round: found.match.currentRound,
             phaseLabel: phaseLabel(found.match.currentRound.phase),
             activePlayers: playersInRound(found.match, found.match.currentRound),
-            roundScoreRows: scoreRows(found.match, found.match.currentRound)
+            roundScoreRows: scoreRows(found.match, found.match.currentRound),
+            eventRows: resultPresenter.eventRows(found.match, found.match.currentRound),
+            nextDealerIndex: dealerUpdate.nextDealerIndex === undefined ?
+                this.data.nextDealerIndex : dealerUpdate.nextDealerIndex
         });
     },
 
@@ -922,7 +942,11 @@ Page({
             var baseMatch = clone(found.match);
             var completedRound = clone(baseMatch.currentRound);
             delete baseMatch.currentRound;
-            var committed = matchState.commitRound(baseMatch, completedRound);
+            var options = {};
+            if (this.data.dealerOverrideChanged) {
+                options.dealerOverrideId = baseMatch.players[this.data.nextDealerIndex].id;
+            }
+            var committed = matchState.commitRound(baseMatch, completedRound, options);
             delete committed.currentRound;
             app.globalData.localData = matchService.persistMatch(
                 wx, app.globalData.localData, committed
@@ -934,6 +958,13 @@ Page({
         } catch (error) {
             wx.showToast({ title: error.message || '本局入账失败', icon: 'none' });
         }
+    },
+
+    onNextDealerChange: function (event) {
+        this.setData({
+            nextDealerIndex: Number(event.detail.value),
+            dealerOverrideChanged: true
+        });
     },
 
     backToMatch: function () {

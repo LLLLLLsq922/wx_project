@@ -45,13 +45,14 @@ function pageContext(definition) {
 
 test('川麻页面均限制横向溢出并提供创建、总分和当前局关键信息', function () {
     var root = path.join(__dirname, '..', 'subpackages', 'sichuan', 'pages');
-    ['create', 'matches', 'match', 'round'].forEach(function (name) {
+    ['create', 'matches', 'match', 'round', 'result'].forEach(function (name) {
         var wxss = fs.readFileSync(path.join(root, name, name + '.wxss'), 'utf8');
         assert.match(wxss, /\.page-shell\s*\{[^}]*overflow-x:\s*hidden/s);
     });
     assert.match(fs.readFileSync(path.join(root, 'create', 'create.wxml'), 'utf8'), /创建并保存牌局/);
     assert.match(fs.readFileSync(path.join(root, 'match', 'match.wxml'), 'utf8'), /当前总分/);
     assert.match(fs.readFileSync(path.join(root, 'round', 'round.wxml'), 'utf8'), /本局换牌方向/);
+    assert.match(fs.readFileSync(path.join(root, 'result', 'result.wxml'), 'utf8'), /逐笔支付/);
 });
 
 test('创建页面把四名玩家和规则保存为本机进行中牌局', function () {
@@ -221,7 +222,7 @@ function winningDraft() {
     };
 }
 
-test('当前局页面根据完整手牌计算番数并把结束牌局计入整场', function () {
+test('当前局页面根据完整手牌计算番数并可人工改庄后计入整场', function () {
     var match = playableMatch('normal');
     var app = {
         globalData: {
@@ -249,14 +250,47 @@ test('当前局页面根据完整手牌计算番数并把结束牌局计入整�
     assert.equal(page.data.round.events[0].winners[0].pattern, '平胡');
     assert.deepEqual(page.data.round.scoreChanges, { p1: 1, p2: -1, p3: 0, p4: 0 });
 
+    page.onNextDealerChange({ detail: { value: 2 } });
     page.commitEndedRound();
     var saved = matchService.findMatch(app.globalData.localData, 'win-match').match;
     assert.equal(saved.currentRound, undefined);
     assert.equal(saved.rounds.length, 1);
+    assert.equal(saved.rounds[0].dealerOverrideId, 'p3');
+    assert.equal(saved.nextDealerId, 'p3');
     assert.deepEqual(saved.scoreTotals, { p1: 1, p2: -1, p3: 0, p4: 0 });
     assert.equal(calls.some(function (call) {
         return call[0] === 'redirect' && call[1].indexOf('/subpackages/sichuan/pages/match/match?id=') === 0;
     }), true);
+});
+
+test('不限局数牌局可从总览手动结束并迁移到历史集合', function () {
+    var match = matchState.createMatch({
+        matchId: 'unlimited-match',
+        mode: 'normal',
+        players: [
+            { id: 'p1', name: '甲' }, { id: 'p2', name: '乙' },
+            { id: 'p3', name: '丙' }, { id: 'p4', name: '丁' }
+        ],
+        initialDealerId: 'p1',
+        format: { type: 'unlimited' },
+        timestamp: '2026-09-05T00:00:00.000Z'
+    });
+    var app = { globalData: { localData: matchService.upsertMatch(schema.createDefaultData(), match) } };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/match/match.js');
+    var page = pageContext(definition);
+    page.data.matchId = 'unlimited-match';
+    page.refreshMatch();
+    assert.equal(page.data.canManualEnd, true);
+
+    page.endUnlimitedMatchNow();
+
+    var found = matchService.findMatch(app.globalData.localData, 'unlimited-match');
+    assert.equal(found.collection, 'completedMatches');
+    assert.equal(found.match.status, 'completed');
+    assert.equal(page.data.canManualEnd, false);
 });
 
 test('当前局页面拒绝未组成合法结构的胡牌并保留本机草稿', function () {

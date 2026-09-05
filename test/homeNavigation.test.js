@@ -85,6 +85,7 @@ test('app配置包含川麻算牌、创建、列表、总览和局内录入页�
         'pages/create/create',
         'pages/matches/matches',
         'pages/match/match',
-        'pages/round/round'
+        'pages/round/round',
+        'pages/result/result'
     ]);
 });

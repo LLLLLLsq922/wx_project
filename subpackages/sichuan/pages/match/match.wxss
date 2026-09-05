@@ -21,3 +21,7 @@
 .round-next { color: #7d9088; }
 .start-button { height: 92rpx; border-radius: 24rpx; background: linear-gradient(135deg, #0d8c58, #19b574); color: #fff; font-size: 31rpx; font-weight: 750; line-height: 92rpx; box-shadow: 0 12rpx 28rpx rgba(16,139,89,.21); }
 .start-button::after { border: 0; }
+.round-pressed { background: #edf7f2; }
+.end-button { height: 76rpx; margin-top: 14rpx; border: 2rpx solid #d76358; border-radius: 20rpx; background: #fff; color: #c65349; font-size: 25rpx; line-height: 72rpx; }
+.end-button::after { border: 0; }
+.completed-note { margin-top: 18rpx; padding: 18rpx; border-radius: 17rpx; background: #e7f5ed; color: #167f57; font-size: 22rpx; text-align: center; }

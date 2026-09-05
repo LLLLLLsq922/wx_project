@@ -1,0 +1,28 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 20rpx 20rpx 80rpx; overflow-x: hidden; background: linear-gradient(180deg,#dff2e7 0,#f4f7f5 390rpx); color: #19362b; }
+.hero-card, .score-card, .section-card { box-sizing: border-box; width: 100%; margin-bottom: 16rpx; padding: 23rpx; border-radius: 23rpx; background: rgba(255,255,255,.97); box-shadow: 0 9rpx 25rpx rgba(25,78,56,.07); }
+.eyebrow, .page-title, .hero-copy, .score-name, .score-value, .section-title, .row-title, .row-detail, .empty-copy { display: block; }
+.eyebrow { color: #6f857c; font-size: 20rpx; }
+.page-title { margin-top: 2rpx; font-size: 38rpx; font-weight: 850; }
+.hero-copy { margin-top: 5rpx; color: #758a81; font-size: 21rpx; }
+.score-card { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 7rpx; padding: 14rpx; }
+.score-item { min-width: 0; padding: 10rpx 3rpx; border-radius: 13rpx; background: #f1f5f3; text-align: center; }
+.score-name, .score-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score-name { color: #70847c; font-size: 19rpx; }
+.score-value { color: #14845a; font-size: 27rpx; font-weight: 800; }
+.score-value.is-negative { color: #d45a50; }
+.section-title { margin-bottom: 12rpx; font-size: 29rpx; font-weight: 780; }
+.timeline-row { display: flex; padding: 14rpx 0; border-top: 1rpx solid #edf1ef; }
+.timeline-index { width: 40rpx; height: 40rpx; margin-right: 11rpx; border-radius: 50%; background: #e6f5ed; color: #15835a; font-size: 19rpx; font-weight: 750; line-height: 40rpx; text-align: center; flex-shrink: 0; }
+.timeline-copy { min-width: 0; }
+.row-title { font-size: 23rpx; font-weight: 700; }
+.row-detail { margin-top: 4rpx; color: #788b83; font-size: 19rpx; line-height: 1.5; }
+.empty-copy { padding: 20rpx 0; color: #96a39e; font-size: 21rpx; text-align: center; }
+.winner-hand { margin-top: 12rpx; padding: 14rpx; border-radius: 16rpx; background: #f3f7f5; }
+.hand-heading, .payment-head { display: flex; justify-content: space-between; gap: 10rpx; font-size: 21rpx; font-weight: 700; }
+.tiles-row { display: flex; flex-wrap: wrap; margin-top: 9rpx; }
+.tiles-row image { width: 54rpx; height: 73rpx; margin: 1rpx; }
+.meld-row { display: flex; align-items: center; margin-top: 7rpx; color: #a86224; font-size: 18rpx; }
+.meld-row > text { width: 58rpx; }
+.meld-row image { width: 44rpx; height: 60rpx; margin-right: -2rpx; }
+.payment-row { padding: 14rpx 0; border-top: 1rpx solid #edf1ef; }
+.payment-head text:last-child { color: #15835a; font-size: 19rpx; font-weight: 650; }

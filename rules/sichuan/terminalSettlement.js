@@ -216,7 +216,9 @@ function settleExhaustiveDraw(input, inputRules) {
         changes: ledger.calculateChanges(participantIds, transactions),
         order: transactions.map(function (transaction) { return transaction.type; }),
         huazhuPlayerIds: huazhuIds,
-        dajiaoResults: eligibleIds.map(function (playerId) { return dajiaoByPlayer[playerId]; }),
+        dajiaoResults: eligibleIds.map(function (playerId) {
+            return dajiaoByPlayer[playerId];
+        }).filter(Boolean),
         rules: rules
     };
 }

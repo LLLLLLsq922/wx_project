@@ -134,6 +134,7 @@ test('关闭三项终局规则时不产生交易', function () {
     }, { huazhuEnabled: false, dajiaoEnabled: false, taxRefundEnabled: false });
     assert.deepEqual(settled.transactions, []);
     assert.deepEqual(settled.changes, { p1: 0, p2: 0, p3: 0, p4: 0 });
+    assert.deepEqual(settled.dajiaoResults, []);
 });
 
 test('终局规则拒绝非牌墙耗尽、缺失大叫判定和已和花猪冲突', function () {

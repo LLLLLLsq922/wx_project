@@ -1,0 +1,45 @@
+<wxs module="viewUtil">
+function tileImage(tileId) {
+  var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
+  return '/images/cards/' + tileId.charAt(1) + suit + '.png';
+}
+module.exports.tileImage = tileImage;
+</wxs>
+<view class="page-shell" wx:if="{{round}}">
+  <view class="hero-card">
+    <text class="eyebrow">第 {{roundNumber}} 局</text>
+    <text class="page-title">{{round.endReason === 'wallExhausted' ? '牌墙耗尽' : '和牌结束'}}</text>
+    <text class="hero-copy">庄家 {{dealerName}} · 下一庄 {{nextDealerName}}</text>
+  </view>
+
+  <view class="score-card">
+    <view class="score-item" wx:for="{{scoreRows}}" wx:key="id"><text class="score-name">{{item.name}}</text><text class="score-value {{item.score < 0 ? 'is-negative' : ''}}">{{item.score > 0 ? '+' : ''}}{{item.score}}</text></view>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">本局事件</text>
+    <view class="timeline-row" wx:for="{{eventRows}}" wx:key="id">
+      <text class="timeline-index">{{item.index}}</text>
+      <view class="timeline-copy"><text class="row-title">{{item.title}}</text><text class="row-detail">{{item.detail}}</text></view>
+    </view>
+    <text class="empty-copy" wx:if="{{!eventRows.length}}">本局没有已记录事件</text>
+  </view>
+
+  <view class="section-card" wx:if="{{winnerHands.length}}">
+    <text class="section-title">和牌牌面</text>
+    <view class="winner-hand" wx:for="{{winnerHands}}" wx:key="id" wx:for-item="hand">
+      <view class="hand-heading"><text>{{hand.playerName}} · {{hand.pattern}}</text><text>{{hand.fan}}番</text></view>
+      <view class="tiles-row"><image wx:for="{{hand.concealedTiles}}" wx:key="index" src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
+      <view class="meld-row" wx:for="{{hand.melds}}" wx:key="index" wx:for-item="meld"><text>{{meld.label}}</text><view><image wx:for="{{meld.tiles}}" wx:key="index" src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view></view>
+    </view>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">逐笔支付</text>
+    <view class="payment-row" wx:for="{{transactionRows}}" wx:key="id">
+      <view class="payment-head"><text>{{item.index}}. {{item.reason}}</text><text>{{item.formula}}</text></view>
+      <text class="row-detail">{{item.transferText}}</text>
+    </view>
+    <text class="empty-copy" wx:if="{{!transactionRows.length}}">本局没有分数交易</text>
+  </view>
+</view>

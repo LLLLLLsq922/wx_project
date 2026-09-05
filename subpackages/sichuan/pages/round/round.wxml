@@ -3,7 +3,14 @@ function tileImage(tileId) {
   var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
   return '/images/cards/' + tileId.charAt(1) + suit + '.png';
 }
+function tileName(tileId) {
+  var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
+  return tileId.charAt(1) + suit;
+}
+function contains(list, value) { return list && list.indexOf(value) !== -1; }
 module.exports.tileImage = tileImage;
+module.exports.tileName = tileName;
+module.exports.contains = contains;
 </wxs>
 <view class="page-shell" wx:if="{{round}}">
   <view class="phase-card">
@@ -29,17 +36,12 @@ module.exports.tileImage = tileImage;
       </view>
       <view class="selected-strip">
         <view class="empty-slot" wx:if="{{!exchangeSelections[match.players[currentExchangePlayerIndex].id].length}}">尚未选择</view>
-        <view class="selected-tile" wx:for="{{exchangeSelections[match.players[currentExchangePlayerIndex].id]}}" wx:key="index" data-player="{{match.players[currentExchangePlayerIndex].id}}" data-index="{{index}}" bindtap="removeExchangeTile">
-          <image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" />
-        </view>
+        <view class="selected-tile" wx:for="{{exchangeSelections[match.players[currentExchangePlayerIndex].id]}}" wx:key="index" data-player="{{match.players[currentExchangePlayerIndex].id}}" data-index="{{index}}" bindtap="removeExchangeTile"><image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
       </view>
     </view>
-
     <view class="tile-bank">
       <view class="tile-row" wx:for="{{tileGroups}}" wx:key="suit" wx:for-item="group">
-        <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="selectExchangeTile" hover-class="tile-pressed">
-          <image src="{{tile.image}}" mode="aspectFit" />
-        </view>
+        <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="selectExchangeTile" hover-class="tile-pressed"><image src="{{tile.image}}" mode="aspectFit" /></view>
       </view>
     </view>
     <button class="primary-button" bindtap="submitExchange">确认四家换三张</button>
@@ -75,24 +77,88 @@ module.exports.tileImage = tileImage;
         <view class="action-card wall" bindtap="openWallEnd" hover-class="action-pressed"><text class="action-mark">终</text><text class="action-name">牌墙耗尽</text></view>
       </view>
     </view>
+
+    <view class="operation-card win-form" wx:if="{{showWinForm}}">
+      <view class="form-head"><text class="section-title">记录胡牌</text><text class="close-link" bindtap="closeWinEntry">关闭</text></view>
+      <view class="form-row"><text>自摸</text><switch checked="{{winIsSelfDraw}}" bindchange="onWinSelfDrawChange" color="#168a5b" /></view>
+      <view class="form-block">
+        <text class="form-label">和牌者{{winIsSelfDraw ? '（只能选择一人）' : '（可一炮多响）'}}</text>
+        <view class="winner-tabs">
+          <view class="winner-tab {{viewUtil.contains(selectedWinnerIds, item.id) ? 'is-winner' : ''}} {{currentWinPlayerId === item.id ? 'is-editing' : ''}}" wx:for="{{activePlayers}}" wx:key="id" data-player="{{item.id}}" bindtap="toggleWinner">
+            <text>{{item.name}}</text><text>{{viewUtil.contains(selectedWinnerIds, item.id) ? '已选' : '选择'}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="form-row" wx:if="{{!winIsSelfDraw}}">
+        <text>点炮者</text>
+        <picker range="{{activePlayers}}" range-key="name" value="{{winDiscarderIndex}}" bindchange="onWinDiscarderChange"><view class="picker-value">{{activePlayers[winDiscarderIndex].name}} ›</view></picker>
+      </view>
+
+      <view class="hand-editor" wx:if="{{currentWinPlayerId}}">
+        <text class="form-label">分别点击玩家编辑其完整牌面</text>
+        <view class="player-edit-tabs">
+          <view class="edit-player {{currentWinPlayerId === item.id ? 'is-active' : ''}}" wx:for="{{activePlayers}}" wx:key="id" data-player="{{item.id}}" bindtap="switchWinPlayer">{{item.name}}</view>
+        </view>
+        <view class="hand-count">暗手 {{currentWinDraft.concealedTiles.length}} 张 · 副露 {{currentWinDraft.melds.length}} 组</view>
+        <view class="selected-hand">
+          <text class="empty-slot" wx:if="{{!currentWinDraft.concealedTiles.length}}">点击下方牌面加入暗手</text>
+          <view class="hand-tile" wx:for="{{currentWinDraft.concealedTiles}}" wx:key="index" data-index="{{index}}" bindtap="removeWinTile"><image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
+        </view>
+        <view class="meld-list" wx:if="{{currentWinDraft.melds.length}}">
+          <view class="meld-chip" wx:for="{{currentWinDraft.melds}}" wx:key="index" data-index="{{index}}" bindtap="removeWinMeld">{{item.label}} ×</view>
+        </view>
+        <view class="compact-tile-bank">
+          <view class="tile-row" wx:for="{{tileGroups}}" wx:key="suit" wx:for-item="group">
+            <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="addWinTile" hover-class="tile-pressed"><image src="{{tile.image}}" mode="aspectFit" /></view>
+          </view>
+        </view>
+        <view class="meld-builder">
+          <picker range="{{meldTypeOptions}}" range-key="label" value="{{meldTypeIndex}}" bindchange="onMeldTypeChange"><view class="builder-picker">{{meldTypeOptions[meldTypeIndex].label}} ›</view></picker>
+          <picker range="{{tileOptions}}" range-key="name" value="{{meldTileIndex}}" bindchange="onMeldTileChange"><view class="builder-picker">{{tileOptions[meldTileIndex].name}} ›</view></picker>
+          <view class="small-action" bindtap="addWinMeld">加入副露</view>
+        </view>
+        <view class="form-row">
+          <text>和牌张</text>
+          <picker range="{{tileOptions}}" range-key="name" bindchange="onWinTileChange"><view class="picker-value">{{currentWinDraft.winTile ? viewUtil.tileName(currentWinDraft.winTile) : '请选择'}} ›</view></picker>
+        </view>
+        <button class="secondary-button" bindtap="calculateCurrentWinner">检查当前手牌</button>
+        <view class="win-result {{currentWinDraft.result.canWin ? 'is-valid' : 'is-invalid'}}" wx:if="{{currentWinDraft.result}}">
+          <text class="result-title">{{currentWinDraft.result.canWin ? '可以和牌 · ' + currentWinDraft.result.totalFan + '番' : '暂不能和牌'}}</text>
+          <text class="result-copy">{{currentWinDraft.result.canWin ? currentWinDraft.result.selectedCandidate.pattern : '请检查牌张数量、定缺和牌型结构'}}</text>
+        </view>
+      </view>
+
+      <view class="form-block event-block">
+        <text class="form-label">附加番种</text>
+        <view class="event-switch" wx:for="{{winContextOptions}}" wx:key="key">
+          <text>{{item.label}}</text><switch data-key="{{item.key}}" checked="{{winContext[item.key]}}" bindchange="onWinContextChange" color="#168a5b" />
+        </view>
+      </view>
+      <button class="primary-button form-submit" bindtap="submitWin">计算并记录本次胡牌</button>
+    </view>
+
     <view class="operation-card kong-form" wx:if="{{showKongForm}}">
       <view class="form-head"><text class="section-title">记录杠牌</text><text class="close-link" bindtap="closeKongEntry">关闭</text></view>
-      <view class="form-row">
-        <text>杠牌类型</text>
-        <picker range="{{kongTypeOptions}}" range-key="label" value="{{kongTypeIndex}}" bindchange="onKongTypeChange"><view class="picker-value">{{kongTypeOptions[kongTypeIndex].label}} ›</view></picker>
-      </view>
-      <view class="form-row">
-        <text>杠牌玩家</text>
-        <picker range="{{activePlayers}}" range-key="name" value="{{kongActorIndex}}" bindchange="onKongActorChange"><view class="picker-value">{{activePlayers[kongActorIndex].name}} ›</view></picker>
-      </view>
-      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'directKong'}}">
-        <text>点杠玩家</text>
-        <picker range="{{activePlayers}}" range-key="name" value="{{kongSourceIndex}}" bindchange="onKongSourceChange"><view class="picker-value">{{activePlayers[kongSourceIndex].name}} ›</view></picker>
-      </view>
-      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'addedKong'}}">
-        <text>被抢杠</text><switch checked="{{kongRobbed}}" bindchange="onKongRobbedChange" color="#168a5b" />
-      </view>
+      <view class="form-row"><text>杠牌类型</text><picker range="{{kongTypeOptions}}" range-key="label" value="{{kongTypeIndex}}" bindchange="onKongTypeChange"><view class="picker-value">{{kongTypeOptions[kongTypeIndex].label}} ›</view></picker></view>
+      <view class="form-row"><text>杠牌玩家</text><picker range="{{activePlayers}}" range-key="name" value="{{kongActorIndex}}" bindchange="onKongActorChange"><view class="picker-value">{{activePlayers[kongActorIndex].name}} ›</view></picker></view>
+      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'directKong'}}"><text>点杠玩家</text><picker range="{{activePlayers}}" range-key="name" value="{{kongSourceIndex}}" bindchange="onKongSourceChange"><view class="picker-value">{{activePlayers[kongSourceIndex].name}} ›</view></picker></view>
+      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'addedKong'}}"><text>被抢杠</text><switch checked="{{kongRobbed}}" bindchange="onKongRobbedChange" color="#168a5b" /></view>
       <button class="primary-button form-submit" bindtap="submitKong">确认记录杠牌</button>
+    </view>
+  </block>
+
+  <block wx:elif="{{round.phase === 'ended'}}">
+    <view class="score-card">
+      <view class="round-score" wx:for="{{roundScoreRows}}" wx:key="id">
+        <text class="round-score-name">{{item.name}}</text>
+        <text class="round-score-value {{item.score < 0 ? 'is-negative' : ''}}">{{item.score > 0 ? '+' : ''}}{{item.score}}</text>
+      </view>
+    </view>
+    <view class="operation-card end-card">
+      <text class="end-mark">本局完成</text>
+      <text class="section-title">{{round.endReason === 'wallExhausted' ? '牌墙耗尽' : '和牌结算完成'}}</text>
+      <text class="section-copy">确认后将本局分数计入整场，并根据首个和牌事件自动确定下一庄。</text>
+      <button class="primary-button form-submit" bindtap="commitEndedRound">确认结果并计入整场</button>
     </view>
   </block>
 

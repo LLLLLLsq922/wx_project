@@ -186,3 +186,130 @@ test('当前局页面保存部分换牌选择并推进换三张和定缺阶段',
     assert.equal(afterKong.transactions[0].type, 'kong');
     assert.deepEqual(afterKong.scoreChanges, { p1: 2, p2: -2, p3: 0, p4: 0 });
 });
+
+function playableMatch(mode) {
+    var match = matchState.createMatch({
+        matchId: 'win-match',
+        mode: mode || 'normal',
+        players: [
+            { id: 'p1', name: '甲' }, { id: 'p2', name: '乙' },
+            { id: 'p3', name: '丙' }, { id: 'p4', name: '丁' }
+        ],
+        initialDealerId: 'p1',
+        format: { type: 'fixedRounds', roundCount: 4 },
+        rules: {
+            huansanzhangEnabled: false,
+            dingqueEnabled: false,
+            menqingZhongzhangEnabled: false
+        },
+        timestamp: '2026-09-05T00:00:00.000Z'
+    });
+    match.currentRound = matchState.createNextRound(match, { roundId: 'win-round' });
+    return match;
+}
+
+function winningDraft() {
+    return {
+        concealedTiles: [
+            'm1', 'm2', 'm3', 'm3', 'm4', 'm5', 's2',
+            's3', 's4', 's6', 's7', 's8', 'm5', 'm5'
+        ],
+        melds: [],
+        winTile: 'm5',
+        result: null
+    };
+}
+
+test('当前局页面根据完整手牌计算番数并把结束牌局计入整场', function () {
+    var match = playableMatch('normal');
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+    page.openWinEntry();
+    page.data.winDrafts.p1 = winningDraft();
+    page.data.currentWinDraft = winningDraft();
+
+    page.calculateCurrentWinner();
+    assert.equal(page.data.currentWinDraft.result.canWin, true);
+    assert.equal(page.data.currentWinDraft.result.totalFan, 0);
+
+    page.submitWin();
+    assert.equal(page.data.round.ended, true);
+    assert.equal(page.data.round.events[0].winners[0].pattern, '平胡');
+    assert.deepEqual(page.data.round.scoreChanges, { p1: 1, p2: -1, p3: 0, p4: 0 });
+
+    page.commitEndedRound();
+    var saved = matchService.findMatch(app.globalData.localData, 'win-match').match;
+    assert.equal(saved.currentRound, undefined);
+    assert.equal(saved.rounds.length, 1);
+    assert.deepEqual(saved.scoreTotals, { p1: 1, p2: -1, p3: 0, p4: 0 });
+    assert.equal(calls.some(function (call) {
+        return call[0] === 'redirect' && call[1].indexOf('/subpackages/sichuan/pages/match/match?id=') === 0;
+    }), true);
+});
+
+test('当前局页面拒绝未组成合法结构的胡牌并保留本机草稿', function () {
+    var match = playableMatch('normal');
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+    page.openWinEntry();
+    page.addWinTile({ currentTarget: { dataset: { tile: { id: 'm1' } } } });
+    page.submitWin();
+
+    var savedRound = matchService.findMatch(app.globalData.localData, 'win-match').match.currentRound;
+    assert.equal(savedRound.ended, false);
+    assert.deepEqual(savedRound.inputDraft.winEntry.drafts.p1.concealedTiles, ['m1']);
+    assert.equal(calls.some(function (call) {
+        return call[0] === 'toast' && call[1].indexOf('牌张数量不正确') !== -1;
+    }), true);
+});
+
+test('当前局页面支持一炮多响并分别使用每名玩家的算牌结果', function () {
+    var match = playableMatch('bloodBattle');
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+    page.openWinEntry();
+    page.data.selectedWinnerIds = ['p1', 'p3'];
+    page.data.winDiscarderIndex = 1;
+    page.data.winDrafts = { p1: winningDraft(), p3: winningDraft() };
+
+    page.submitWin();
+
+    assert.equal(page.data.round.ended, false);
+    assert.deepEqual(page.data.round.activePlayerIds, ['p2', 'p4']);
+    assert.deepEqual(page.data.round.scoreChanges, { p1: 1, p2: -2, p3: 1, p4: 0 });
+    assert.equal(page.data.round.events[0].winners.length, 2);
+    assert.deepEqual(page.data.winDrafts, {});
+});

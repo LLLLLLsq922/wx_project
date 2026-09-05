@@ -1,16 +1,101 @@
+<wxs module="viewUtil">
+function tileImage(tileId) {
+  var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
+  return '/images/cards/' + tileId.charAt(1) + suit + '.png';
+}
+module.exports.tileImage = tileImage;
+</wxs>
 <view class="page-shell" wx:if="{{round}}">
   <view class="phase-card">
-    <text class="phase-kicker">第 {{match.rounds.length + 1}} 局</text>
-    <text class="phase-title">{{phaseLabel}}</text>
-    <text class="phase-copy">庄家：{{dealerName}}</text>
+    <view>
+      <text class="phase-kicker">第 {{match.rounds.length + 1}} 局 · 庄家 {{dealerName}}</text>
+      <text class="phase-title">{{phaseLabel}}</text>
+    </view>
     <view class="direction-box" wx:if="{{round.phase === 'exchange'}}">
       <text class="direction-label">本局换牌方向</text>
       <text class="direction-value">{{round.exchangeDirection === 'clockwise' ? '顺时针' : round.exchangeDirection === 'counterclockwise' ? '逆时针' : '对家'}}</text>
     </view>
   </view>
-  <view class="notice-card">
-    <text class="notice-title">当前局已经保存到本机</text>
-    <text class="notice-copy">关闭小程序后仍可从“继续牌局”恢复。换三张、定缺和完整手牌录入控件将在下一批接入。</text>
-  </view>
+
+  <block wx:if="{{round.phase === 'exchange'}}">
+    <view class="operation-card">
+      <text class="section-title">选择换出的牌</text>
+      <text class="section-copy">逐一为四家选择同花色三张牌，点击已选牌可撤销。</text>
+      <view class="player-tabs">
+        <view class="player-tab {{currentExchangePlayerIndex === index ? 'is-active' : ''}}" wx:for="{{match.players}}" wx:key="id" data-index="{{index}}" bindtap="selectExchangePlayer">
+          <text>{{item.name}}</text>
+          <text class="selection-count">{{exchangeSelections[item.id].length || 0}}/3</text>
+        </view>
+      </view>
+      <view class="selected-strip">
+        <view class="empty-slot" wx:if="{{!exchangeSelections[match.players[currentExchangePlayerIndex].id].length}}">尚未选择</view>
+        <view class="selected-tile" wx:for="{{exchangeSelections[match.players[currentExchangePlayerIndex].id]}}" wx:key="index" data-player="{{match.players[currentExchangePlayerIndex].id}}" data-index="{{index}}" bindtap="removeExchangeTile">
+          <image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" />
+        </view>
+      </view>
+    </view>
+
+    <view class="tile-bank">
+      <view class="tile-row" wx:for="{{tileGroups}}" wx:key="suit" wx:for-item="group">
+        <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="selectExchangeTile" hover-class="tile-pressed">
+          <image src="{{tile.image}}" mode="aspectFit" />
+        </view>
+      </view>
+    </view>
+    <button class="primary-button" bindtap="submitExchange">确认四家换三张</button>
+  </block>
+
+  <block wx:elif="{{round.phase === 'dingque'}}">
+    <view class="operation-card">
+      <text class="section-title">四家定缺</text>
+      <text class="section-copy">为每名玩家选择本局必须先打完的花色。</text>
+      <view class="dingque-row" wx:for="{{match.players}}" wx:key="id" wx:for-item="player">
+        <text class="dingque-player">{{player.name}}</text>
+        <view class="suit-buttons">
+          <view class="suit-button {{dingqueSuits[player.id] === suit.id ? 'is-selected' : ''}}" wx:for="{{suitOptions}}" wx:key="id" wx:for-item="suit" data-player="{{player.id}}" data-suit="{{suit.id}}" bindtap="selectDingque">{{suit.name}}</view>
+        </view>
+      </view>
+    </view>
+    <button class="primary-button" bindtap="submitDingque">确认四家定缺</button>
+  </block>
+
+  <block wx:elif="{{round.phase === 'play'}}">
+    <view class="score-card">
+      <view class="round-score" wx:for="{{roundScoreRows}}" wx:key="id">
+        <text class="round-score-name">{{item.name}}</text>
+        <text class="round-score-value {{item.score < 0 ? 'is-negative' : ''}}">{{item.score > 0 ? '+' : ''}}{{item.score}}</text>
+      </view>
+    </view>
+    <view class="operation-card">
+      <text class="section-title">记录本局事件</text>
+      <text class="section-copy">每次胡牌和杠牌都会即时计入本局，血战与血流可连续录入。</text>
+      <view class="action-grid">
+        <view class="action-card win" bindtap="openWinEntry" hover-class="action-pressed"><text class="action-mark">胡</text><text class="action-name">记录胡牌</text></view>
+        <view class="action-card kong" bindtap="openKongEntry" hover-class="action-pressed"><text class="action-mark">杠</text><text class="action-name">记录杠牌</text></view>
+        <view class="action-card wall" bindtap="openWallEnd" hover-class="action-pressed"><text class="action-mark">终</text><text class="action-name">牌墙耗尽</text></view>
+      </view>
+    </view>
+    <view class="operation-card kong-form" wx:if="{{showKongForm}}">
+      <view class="form-head"><text class="section-title">记录杠牌</text><text class="close-link" bindtap="closeKongEntry">关闭</text></view>
+      <view class="form-row">
+        <text>杠牌类型</text>
+        <picker range="{{kongTypeOptions}}" range-key="label" value="{{kongTypeIndex}}" bindchange="onKongTypeChange"><view class="picker-value">{{kongTypeOptions[kongTypeIndex].label}} ›</view></picker>
+      </view>
+      <view class="form-row">
+        <text>杠牌玩家</text>
+        <picker range="{{activePlayers}}" range-key="name" value="{{kongActorIndex}}" bindchange="onKongActorChange"><view class="picker-value">{{activePlayers[kongActorIndex].name}} ›</view></picker>
+      </view>
+      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'directKong'}}">
+        <text>点杠玩家</text>
+        <picker range="{{activePlayers}}" range-key="name" value="{{kongSourceIndex}}" bindchange="onKongSourceChange"><view class="picker-value">{{activePlayers[kongSourceIndex].name}} ›</view></picker>
+      </view>
+      <view class="form-row" wx:if="{{kongTypeOptions[kongTypeIndex].value === 'addedKong'}}">
+        <text>被抢杠</text><switch checked="{{kongRobbed}}" bindchange="onKongRobbedChange" color="#168a5b" />
+      </view>
+      <button class="primary-button form-submit" bindtap="submitKong">确认记录杠牌</button>
+    </view>
+  </block>
+
+  <view class="save-note"><text>当前选择会自动保存在本机</text></view>
   <button class="back-button" bindtap="backToMatch">返回牌局总览</button>
 </view>

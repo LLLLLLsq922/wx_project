@@ -123,3 +123,66 @@ test('牌局总览开始下一局时创建并持久化可恢复草稿', function
         return call[0] === 'navigate' && call[1] === '/subpackages/sichuan/pages/round/round?id=m1';
     }), true);
 });
+
+test('当前局页面保存部分换牌选择并推进换三张和定缺阶段', function () {
+    var match = matchState.createMatch({
+        matchId: 'm1',
+        mode: 'bloodBattle',
+        players: [
+            { id: 'p1', name: '甲' }, { id: 'p2', name: '乙' },
+            { id: 'p3', name: '丙' }, { id: 'p4', name: '丁' }
+        ],
+        initialDealerId: 'p1',
+        format: { type: 'fixedRounds', roundCount: 4 },
+        timestamp: '2026-09-05T00:00:00.000Z'
+    });
+    match.currentRound = matchState.createNextRound(match, {
+        roundId: 'r1', random: function () { return 0; }
+    });
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'm1' });
+    page.onShow();
+
+    page.selectExchangeTile({ currentTarget: { dataset: {
+        tile: { id: 'm1', suit: 'm', name: '1万' }
+    } } });
+    var partial = matchService.findMatch(app.globalData.localData, 'm1').match.currentRound;
+    assert.deepEqual(partial.inputDraft.exchangeSelections.p1, ['m1']);
+
+    page.data.exchangeSelections = {
+        p1: ['m1', 'm2', 'm3'],
+        p2: ['s1', 's2', 's3'],
+        p3: ['p1', 'p2', 'p3'],
+        p4: ['m4', 'm5', 'm6']
+    };
+    page.submitExchange();
+    assert.equal(page.data.round.phase, 'dingque');
+
+    [
+        ['p1', 'p'], ['p2', 'm'], ['p3', 's'], ['p4', 'p']
+    ].forEach(function (selection) {
+        page.selectDingque({ currentTarget: { dataset: {
+            player: selection[0], suit: selection[1]
+        } } });
+    });
+    page.submitDingque();
+    assert.equal(page.data.round.phase, 'play');
+    assert.equal(matchService.findMatch(app.globalData.localData, 'm1').match.currentRound.phase, 'play');
+
+    page.openKongEntry();
+    page.submitKong();
+    var afterKong = matchService.findMatch(app.globalData.localData, 'm1').match.currentRound;
+    assert.equal(afterKong.transactions.length, 1);
+    assert.equal(afterKong.transactions[0].type, 'kong');
+    assert.deepEqual(afterKong.scoreChanges, { p1: 2, p2: -2, p3: 0, p4: 0 });
+});

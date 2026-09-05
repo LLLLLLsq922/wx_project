@@ -23,7 +23,7 @@ test('首页提供五个产品入口并且不产生横向滚动', function () {
     assert.match(wxss, /\.home-page\s*\{[^}]*overflow-x:\s*hidden/s);
 });
 
-test('国标快速算牌进入国标分包，其他玩法显示阶段提示', function () {
+test('国标与川麻快速算牌进入各自分包，日麻显示阶段提示', function () {
     var calls = [];
     global.wx = {
         navigateTo: function (options) { calls.push(['navigateTo', options.url]); },
@@ -41,7 +41,14 @@ test('国标快速算牌进入国标分包，其他玩法显示阶段提示', fu
         data: { selectedVariant: 'sichuan', selectedVariantName: '成都川麻' },
         showPending: pageDefinition.showPending
     });
-    assert.deepEqual(calls, [['showToast', '成都川麻快速算牌将在后续阶段开放']]);
+    assert.deepEqual(calls, [['navigateTo', '/subpackages/sichuan/pages/calc/calc']]);
+
+    calls.length = 0;
+    pageDefinition.openQuickCalc.call({
+        data: { selectedVariant: 'riichi', selectedVariantName: '四人日麻' },
+        showPending: pageDefinition.showPending
+    });
+    assert.deepEqual(calls, [['showToast', '四人日麻快速算牌将在后续阶段开放']]);
 });
 
 test('app配置将首页留在主包并把国标计算页放入分包', function () {
@@ -68,12 +75,13 @@ test('川麻创建与继续牌局入口进入川麻分包', function () {
     ]);
 });
 
-test('app配置包含川麻创建、列表、总览和局内录入页面', function () {
+test('app配置包含川麻算牌、创建、列表、总览和局内录入页面', function () {
     var appConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
     var sichuan = appConfig.subpackages.find(function (subpackage) {
         return subpackage.name === 'sichuan';
     });
     assert.deepEqual(sichuan.pages, [
+        'pages/calc/calc',
         'pages/create/create',
         'pages/matches/matches',
         'pages/match/match',

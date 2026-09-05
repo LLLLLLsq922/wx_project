@@ -1,0 +1,94 @@
+<wxs module="viewUtil">
+function tileImage(tileId) {
+  var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
+  return '/images/cards/' + tileId.charAt(1) + suit + '.png';
+}
+function tileName(tileId) {
+  var suit = tileId.charAt(0) === 'm' ? '万' : (tileId.charAt(0) === 's' ? '条' : '筒');
+  return tileId.charAt(1) + suit;
+}
+module.exports.tileImage = tileImage;
+module.exports.tileName = tileName;
+</wxs>
+<view class="page-shell">
+  <view class="hero-card">
+    <view><text class="eyebrow">成都川麻 · 108张</text><text class="page-title">快速算牌</text></view>
+    <view class="clear-link" bindtap="clearDraft">清空</view>
+  </view>
+
+  <view class="result-card {{result && result.canWin ? 'is-success' : result ? 'is-error' : ''}}">
+    <block wx:if="{{result && result.canWin}}">
+      <view class="result-heading"><text class="result-status">可以和牌</text><text class="total-fan">{{result.totalFan}}番</text></view>
+      <text class="pattern-name">{{result.selectedCandidate.pattern}}</text>
+      <view class="fan-list">
+        <view class="fan-chip" wx:for="{{result.fanList}}" wx:key="name"><text>{{item.name}}</text><text>{{item.fan}}番</text></view>
+      </view>
+      <view class="alternative-list" wx:if="{{result.alternatives.length}}">
+        <text class="subheading">其他可行拆分</text>
+        <view class="alternative" wx:for="{{result.alternatives}}" wx:key="pattern"><text>{{item.pattern}}</text><text>{{item.totalFan}}番</text></view>
+      </view>
+    </block>
+    <block wx:elif="{{result}}">
+      <text class="result-status">暂不能和牌</text><text class="error-copy">{{resultMessage}}</text>
+    </block>
+    <block wx:else>
+      <text class="result-placeholder">录入完整牌面后，这里会显示最高番结果</text>
+      <text class="count-copy">当前 {{structuralCount}}/14 张结构 · 实际 {{physicalCount}} 张</text>
+    </block>
+  </view>
+
+  <view class="section-card" wx:if="{{structuralCount === 13}}">
+    <view class="section-head"><text class="section-title">听牌分析</text><text class="section-note">{{waits.length}}种</text></view>
+    <view class="wait-list" wx:if="{{waits.length}}">
+      <view class="wait-item" wx:for="{{waits}}" wx:key="tileId">
+        <image src="{{item.image}}" mode="aspectFit" />
+        <view><text class="wait-name">{{item.name}} · {{item.fan}}番</text><text class="wait-copy">剩{{item.remaining}}张 · {{item.pattern}}</text></view>
+      </view>
+    </view>
+    <text class="empty-copy" wx:else>当前牌面没有可用听牌</text>
+  </view>
+
+  <view class="section-card">
+    <view class="section-head"><text class="section-title">当前牌面</text><text class="section-note">点击牌可移除</text></view>
+    <view class="selected-hand">
+      <text class="empty-copy" wx:if="{{!concealedTiles.length && !melds.length}}">尚未选择麻将牌</text>
+      <view class="hand-tile" wx:for="{{concealedTiles}}" wx:key="index" data-index="{{index}}" bindtap="removeTile"><image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
+      <view class="meld-group" wx:for="{{melds}}" wx:key="index" data-index="{{index}}" bindtap="removeMeld">
+        <text class="meld-badge">{{item.label}}</text>
+        <view class="meld-tiles"><image wx:for="{{item.tiles}}" wx:key="index" src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
+      </view>
+    </view>
+    <view class="meld-builder">
+      <picker range="{{meldTypeOptions}}" range-key="label" value="{{meldTypeIndex}}" bindchange="onMeldTypeChange"><view class="picker-box">{{meldTypeOptions[meldTypeIndex].label}} ›</view></picker>
+      <picker range="{{tileOptions}}" range-key="name" value="{{meldTileIndex}}" bindchange="onMeldTileChange"><view class="picker-box">{{tileOptions[meldTileIndex].name}} ›</view></picker>
+      <view class="add-meld" bindtap="addMeld">加入副露</view>
+    </view>
+  </view>
+
+  <view class="section-card tile-bank">
+    <view class="section-head"><text class="section-title">选择暗手</text><text class="section-note">川麻不可吃牌</text></view>
+    <view class="tile-row" wx:for="{{tileGroups}}" wx:key="suit" wx:for-item="group">
+      <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="addTile" hover-class="tile-pressed"><image src="{{tile.image}}" mode="aspectFit" /></view>
+    </view>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">和牌信息</text>
+    <view class="form-row"><text>和牌张</text><picker range="{{tileOptions}}" range-key="name" bindchange="onWinTileChange"><view class="picker-value">{{winTile ? viewUtil.tileName(winTile) : '请选择'}} ›</view></picker></view>
+    <view class="form-row" wx:if="{{rules.dingqueEnabled}}"><text>定缺花色</text><view class="suit-buttons"><view class="suit-button {{dingqueSuit === item.id ? 'is-selected' : ''}}" wx:for="{{suitOptions}}" wx:key="id" data-suit="{{item.id}}" bindtap="selectDingque">{{item.name}}</view></view></view>
+  </view>
+
+  <view class="section-card option-card">
+    <text class="section-title">规则配置</text>
+    <view class="switch-row" wx:for="{{ruleOptions}}" wx:key="key"><text>{{item.label}}</text><switch data-key="{{item.key}}" checked="{{rules[item.key]}}" bindchange="onRuleChange" color="#168a5b" /></view>
+  </view>
+
+  <view class="section-card option-card">
+    <text class="section-title">附加番种</text>
+    <view class="switch-grid">
+      <view class="switch-row" wx:for="{{contextOptions}}" wx:key="key"><text>{{item.label}}</text><switch data-key="{{item.key}}" checked="{{context[item.key]}}" bindchange="onContextChange" color="#168a5b" /></view>
+    </view>
+  </view>
+
+  <button class="calculate-button" bindtap="calculate">判断胡牌并计算番数</button>
+</view>

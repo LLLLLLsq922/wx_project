@@ -87,6 +87,10 @@ Page({
             wx.navigateTo({ url: '/subpackages/guobiao/pages/calc/calc' });
             return;
         }
+        if (this.data.selectedVariant === variants.VARIANTS.SICHUAN) {
+            wx.navigateTo({ url: '/subpackages/sichuan/pages/calc/calc' });
+            return;
+        }
         this.showPending('快速算牌');
     },
 

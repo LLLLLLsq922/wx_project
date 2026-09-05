@@ -16,6 +16,7 @@
         "root": "subpackages/sichuan",
         "name": "sichuan",
         "pages": [
+          "pages/calc/calc",
           "pages/create/create",
           "pages/matches/matches",
           "pages/match/match",

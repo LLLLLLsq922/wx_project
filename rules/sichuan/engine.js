@@ -3,6 +3,7 @@
 var tiles = require('../../core/tiles.js');
 var variants = require('../../core/variants.js');
 var settlement = require('./settlement.js');
+var roundState = require('./roundState.js');
 
 var DEFAULT_RULES = {
     dingqueEnabled: true,
@@ -509,5 +510,11 @@ module.exports = {
     analyzeWaits: analyzeWaits,
     getRuleCatalog: getRuleCatalog,
     settleWinEvent: settlement.settleWinEvent,
-    createKongTransaction: settlement.createKongTransaction
+    createKongTransaction: settlement.createKongTransaction,
+    createRoundState: roundState.createRoundState,
+    recordExchange: roundState.recordExchange,
+    recordDingque: roundState.recordDingque,
+    recordWin: roundState.recordWin,
+    recordKong: roundState.recordKong,
+    recordWallExhausted: roundState.recordWallExhausted
 };

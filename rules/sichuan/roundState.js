@@ -21,6 +21,9 @@ var DIRECTION_NAMES = {
 var DEFAULT_RULES = {
     huansanzhangEnabled: true,
     dingqueEnabled: true,
+    menqingZhongzhangEnabled: true,
+    shibaluohanEnabled: true,
+    eventFansEnabled: true,
     baseScore: 1,
     selfDrawMode: 'addBase',
     huazhuEnabled: true,
@@ -367,6 +370,8 @@ function suggestNextDealer(state) {
 module.exports = {
     MODES: MODES,
     EXCHANGE_DIRECTIONS: EXCHANGE_DIRECTIONS,
+    DEFAULT_RULES: DEFAULT_RULES,
+    resolveRules: resolveRules,
     chooseExchangeDirection: chooseExchangeDirection,
     createExchangeRecord: createExchangeRecord,
     createRoundState: createRoundState,

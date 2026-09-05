@@ -5,6 +5,7 @@ var variants = require('../../core/variants.js');
 var settlement = require('./settlement.js');
 var roundState = require('./roundState.js');
 var terminalSettlement = require('./terminalSettlement.js');
+var matchState = require('./matchState.js');
 
 var DEFAULT_RULES = {
     dingqueEnabled: true,
@@ -623,5 +624,12 @@ module.exports = {
     recordWin: roundState.recordWin,
     recordKong: roundState.recordKong,
     recordWallExhausted: roundState.recordWallExhausted,
-    settleExhaustiveDraw: terminalSettlement.settleExhaustiveDraw
+    settleExhaustiveDraw: terminalSettlement.settleExhaustiveDraw,
+    createMatch: matchState.createMatch,
+    createNextRound: matchState.createNextRound,
+    commitRound: matchState.commitRound,
+    replaceRound: matchState.replaceRound,
+    removeRoundsFrom: matchState.removeRoundsFrom,
+    endUnlimitedMatch: matchState.endUnlimitedMatch,
+    replayMatch: matchState.replayMatch
 };

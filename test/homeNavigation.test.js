@@ -54,3 +54,29 @@ test('app配置将首页留在主包并把国标计算页放入分包', function
     assert.equal(appConfig.tabBar.list[0].text, '首页');
     assert.deepEqual(guobiao.pages, ['pages/calc/calc']);
 });
+
+test('川麻创建与继续牌局入口进入川麻分包', function () {
+    var calls = [];
+    global.wx = {
+        navigateTo: function (options) { calls.push(options.url); }
+    };
+    pageDefinition.openCreateMatch.call({ data: { selectedVariant: 'sichuan' } });
+    pageDefinition.openActiveMatches.call({ data: { selectedVariant: 'sichuan' } });
+    assert.deepEqual(calls, [
+        '/subpackages/sichuan/pages/create/create',
+        '/subpackages/sichuan/pages/matches/matches'
+    ]);
+});
+
+test('app配置包含川麻创建、列表、总览和局内录入页面', function () {
+    var appConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'));
+    var sichuan = appConfig.subpackages.find(function (subpackage) {
+        return subpackage.name === 'sichuan';
+    });
+    assert.deepEqual(sichuan.pages, [
+        'pages/create/create',
+        'pages/matches/matches',
+        'pages/match/match',
+        'pages/round/round'
+    ]);
+});

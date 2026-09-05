@@ -1,0 +1,23 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 24rpx 24rpx 120rpx; overflow-x: hidden; background: linear-gradient(180deg, #e2f3ea 0, #f4f7f5 330rpx); color: #19362b; }
+.summary-card, .info-card, .history-card { box-sizing: border-box; width: 100%; margin-bottom: 18rpx; padding: 26rpx; border-radius: 24rpx; background: rgba(255,255,255,.97); box-shadow: 0 9rpx 26rpx rgba(29,77,57,.07); }
+.summary-top, .info-row, .round-row { display: flex; align-items: center; justify-content: space-between; }
+.mode-pill { padding: 6rpx 15rpx; border-radius: 999rpx; background: #168a5b; color: #fff; font-size: 21rpx; }
+.round-count { color: #71877e; font-size: 22rpx; }
+.summary-title, .section-title, .player-name, .score-value, .empty-copy { display: block; }
+.summary-title { margin-top: 22rpx; font-size: 32rpx; font-weight: 800; }
+.score-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12rpx; margin-top: 18rpx; }
+.score-item { position: relative; min-width: 0; padding: 20rpx; border: 2rpx solid transparent; border-radius: 18rpx; background: #f4f7f5; }
+.score-item.is-dealer { border-color: #f0aa69; background: #fff8ef; }
+.dealer-mark { position: absolute; top: 10rpx; right: 11rpx; color: #d56b26; font-size: 19rpx; font-weight: 800; }
+.player-name { overflow: hidden; color: #60756c; font-size: 23rpx; text-overflow: ellipsis; white-space: nowrap; }
+.score-value { margin-top: 5rpx; color: #168a5b; font-size: 36rpx; font-weight: 800; }
+.score-value.is-negative { color: #d8584d; }
+.info-row, .round-row { min-height: 74rpx; border-top: 1rpx solid #edf1ef; }
+.info-row:first-child, .round-row:first-of-type { border-top: 0; }
+.info-value { color: #168a5b; font-weight: 700; }
+.section-title { margin-bottom: 8rpx; font-size: 29rpx; font-weight: 750; }
+.empty-copy { padding: 24rpx 0; color: #85968f; text-align: center; }
+.round-row { font-size: 23rpx; }
+.round-next { color: #7d9088; }
+.start-button { height: 92rpx; border-radius: 24rpx; background: linear-gradient(135deg, #0d8c58, #19b574); color: #fff; font-size: 31rpx; font-weight: 750; line-height: 92rpx; box-shadow: 0 12rpx 28rpx rgba(16,139,89,.21); }
+.start-button::after { border: 0; }

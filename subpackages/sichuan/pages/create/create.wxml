@@ -1,0 +1,71 @@
+<view class="page-shell">
+  <view class="intro-card">
+    <text class="eyebrow">SICHUAN MATCH</text>
+    <text class="page-title">创建成都川麻牌局</text>
+    <text class="page-copy">规则在创建后冻结，整场所有牌局统一使用。</text>
+  </view>
+
+  <view class="form-card">
+    <text class="section-title">四名玩家</text>
+    <view class="player-row" wx:for="{{playerNames}}" wx:key="index">
+      <text class="seat-mark">{{index + 1}}</text>
+      <input class="text-input" value="{{item}}" maxlength="12" data-index="{{index}}" bindinput="onPlayerNameInput" />
+    </view>
+    <view class="field-row">
+      <text class="field-label">初始庄家</text>
+      <picker range="{{playerNames}}" value="{{initialDealerIndex}}" bindchange="onDealerChange">
+        <view class="picker-value">{{playerNames[initialDealerIndex]}} ›</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <text class="section-title">玩法与赛制</text>
+    <radio-group bindchange="onModeChange" class="option-stack">
+      <label class="radio-row" wx:for="{{modeOptions}}" wx:key="value">
+        <view><text class="option-title">{{item.label}}</text></view>
+        <radio value="{{item.value}}" checked="{{mode === item.value}}" color="#168a5b" />
+      </label>
+    </radio-group>
+    <view class="field-row top-divider">
+      <text class="field-label">赛制</text>
+      <picker range="{{formatOptions}}" range-key="label" value="{{formatIndex}}" bindchange="onFormatChange">
+        <view class="picker-value">{{formatOptions[formatIndex].label}} ›</view>
+      </picker>
+    </view>
+    <view class="field-row" wx:if="{{formatOptions[formatIndex].value === 'custom'}}">
+      <text class="field-label">自定义局数</text>
+      <input class="number-input" type="number" value="{{customRoundCount}}" bindinput="onCustomRoundInput" />
+    </view>
+  </view>
+
+  <view class="form-card">
+    <text class="section-title">计分规则</text>
+    <view class="field-row">
+      <text class="field-label">底分</text>
+      <picker range="{{baseScoreOptions}}" value="{{baseScoreIndex}}" bindchange="onBaseScoreChange">
+        <view class="picker-value">{{baseScoreOptions[baseScoreIndex]}}分 ›</view>
+      </picker>
+    </view>
+    <view class="field-row">
+      <text class="field-label">自摸</text>
+      <picker range="{{selfDrawOptions}}" range-key="label" value="{{selfDrawIndex}}" bindchange="onSelfDrawChange">
+        <view class="picker-value">{{selfDrawOptions[selfDrawIndex].label}} ›</view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="form-card">
+    <text class="section-title">功能开关</text>
+    <view class="switch-row"><text>换三张</text><switch checked="{{switches.huansanzhangEnabled}}" data-key="huansanzhangEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>定缺</text><switch checked="{{switches.dingqueEnabled}}" data-key="dingqueEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>门清与中张</text><switch checked="{{switches.menqingZhongzhangEnabled}}" data-key="menqingZhongzhangEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>十八罗汉</text><switch checked="{{switches.shibaluohanEnabled}}" data-key="shibaluohanEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>事件附加番</text><switch checked="{{switches.eventFansEnabled}}" data-key="eventFansEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>查花猪</text><switch checked="{{switches.huazhuEnabled}}" data-key="huazhuEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>查大叫</text><switch checked="{{switches.dajiaoEnabled}}" data-key="dajiaoEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+    <view class="switch-row"><text>退税</text><switch checked="{{switches.taxRefundEnabled}}" data-key="taxRefundEnabled" bindchange="onSwitchChange" color="#168a5b" /></view>
+  </view>
+
+  <button class="submit-button" loading="{{submitting}}" disabled="{{submitting}}" bindtap="createMatch">创建并保存牌局</button>
+</view>

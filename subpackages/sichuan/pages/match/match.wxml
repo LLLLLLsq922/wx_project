@@ -1,0 +1,30 @@
+<view class="page-shell" wx:if="{{match}}">
+  <view class="summary-card">
+    <view class="summary-top"><text class="mode-pill">{{modeLabel}}</text><text class="round-count">已完成 {{match.rounds.length}} 局</text></view>
+    <text class="summary-title">当前总分</text>
+    <view class="score-grid">
+      <view class="score-item {{item.isDealer ? 'is-dealer' : ''}}" wx:for="{{scoreRows}}" wx:key="id">
+        <text class="dealer-mark" wx:if="{{item.isDealer}}">庄</text>
+        <text class="player-name">{{item.name}}</text>
+        <text class="score-value {{item.score < 0 ? 'is-negative' : ''}}">{{item.score > 0 ? '+' : ''}}{{item.score}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="info-card">
+    <view class="info-row"><text>下一庄</text><text class="info-value">{{nextDealerName}}</text></view>
+    <view class="info-row"><text>底分</text><text class="info-value">{{match.rulesSnapshot.baseScore}}分</text></view>
+    <view class="info-row"><text>自摸规则</text><text class="info-value">{{match.rulesSnapshot.selfDrawMode === 'addFan' ? '加1番' : '加底'}}</text></view>
+  </view>
+
+  <view class="history-card">
+    <text class="section-title">已完成牌局</text>
+    <text class="empty-copy" wx:if="{{!match.rounds.length}}">尚未完成第一局</text>
+    <view class="round-row" wx:for="{{match.rounds}}" wx:key="id">
+      <text>第{{index + 1}}局 · {{item.endReason === 'wallExhausted' ? '牌墙耗尽' : '和牌结束'}}</text>
+      <text class="round-next">下一庄 {{item.nextDealerId}}</text>
+    </view>
+  </view>
+
+  <button class="start-button" bindtap="startNextRound">{{hasCurrentRound ? '继续当前局' : '开始下一局'}}</button>
+</view>

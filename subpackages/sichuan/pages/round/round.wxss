@@ -1,0 +1,13 @@
+.page-shell { box-sizing: border-box; min-height: 100vh; width: 100%; padding: 28rpx 24rpx 80rpx; overflow-x: hidden; background: linear-gradient(180deg, #dff2e7 0, #f4f7f5 380rpx); color: #19362b; }
+.phase-card, .notice-card { box-sizing: border-box; width: 100%; margin-bottom: 18rpx; padding: 30rpx; border-radius: 25rpx; background: rgba(255,255,255,.97); box-shadow: 0 10rpx 28rpx rgba(25,78,56,.07); }
+.phase-kicker, .phase-title, .phase-copy, .direction-label, .direction-value, .notice-title, .notice-copy { display: block; }
+.phase-kicker { color: #27815e; font-size: 21rpx; font-weight: 700; letter-spacing: 2rpx; }
+.phase-title { margin-top: 8rpx; font-size: 44rpx; font-weight: 850; }
+.phase-copy { margin-top: 5rpx; color: #71877e; font-size: 25rpx; }
+.direction-box { margin-top: 24rpx; padding: 22rpx; border-radius: 19rpx; background: #eaf7f0; }
+.direction-label { color: #658176; font-size: 22rpx; }
+.direction-value { margin-top: 4rpx; color: #118759; font-size: 34rpx; font-weight: 800; }
+.notice-title { font-size: 29rpx; font-weight: 750; }
+.notice-copy { margin-top: 10rpx; color: #71857d; font-size: 24rpx; line-height: 1.65; }
+.back-button { height: 86rpx; border: 2rpx solid #168a5b; border-radius: 22rpx; background: #fff; color: #168a5b; font-size: 29rpx; font-weight: 700; line-height: 82rpx; }
+.back-button::after { border: 0; }

@@ -1,0 +1,15 @@
+<view class="page-shell">
+  <view class="list-head">
+    <view><text class="page-title">进行中的川麻</text><text class="page-copy">所有数据仅保存在当前手机</text></view>
+    <button class="mini-button" bindtap="createMatch">新建</button>
+  </view>
+  <view class="empty-card" wx:if="{{!matches.length}}">
+    <text class="empty-title">还没有进行中的牌局</text>
+    <text class="empty-copy">创建后可随时返回这里继续。</text>
+  </view>
+  <view class="match-card" wx:for="{{matches}}" wx:key="id" data-id="{{item.id}}" bindtap="openMatch" hover-class="press-feedback">
+    <view class="match-top"><text class="mode-pill">{{item.modeLabel}}</text><text class="draft-pill" wx:if="{{item.hasDraft}}">当前局进行中</text></view>
+    <text class="players">{{item.playerNames}}</text>
+    <text class="meta">{{item.formatLabel}} · 已完成{{item.roundCount}}局</text>
+  </view>
+</view>

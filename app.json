@@ -11,6 +11,16 @@
         "pages": [
           "pages/calc/calc"
         ]
+      },
+      {
+        "root": "subpackages/sichuan",
+        "name": "sichuan",
+        "pages": [
+          "pages/create/create",
+          "pages/matches/matches",
+          "pages/match/match",
+          "pages/round/round"
+        ]
       }
     ],
     "window": {

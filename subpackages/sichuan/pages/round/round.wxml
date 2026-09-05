@@ -1,0 +1,16 @@
+<view class="page-shell" wx:if="{{round}}">
+  <view class="phase-card">
+    <text class="phase-kicker">第 {{match.rounds.length + 1}} 局</text>
+    <text class="phase-title">{{phaseLabel}}</text>
+    <text class="phase-copy">庄家：{{dealerName}}</text>
+    <view class="direction-box" wx:if="{{round.phase === 'exchange'}}">
+      <text class="direction-label">本局换牌方向</text>
+      <text class="direction-value">{{round.exchangeDirection === 'clockwise' ? '顺时针' : round.exchangeDirection === 'counterclockwise' ? '逆时针' : '对家'}}</text>
+    </view>
+  </view>
+  <view class="notice-card">
+    <text class="notice-title">当前局已经保存到本机</text>
+    <text class="notice-copy">关闭小程序后仍可从“继续牌局”恢复。换三张、定缺和完整手牌录入控件将在下一批接入。</text>
+  </view>
+  <button class="back-button" bindtap="backToMatch">返回牌局总览</button>
+</view>

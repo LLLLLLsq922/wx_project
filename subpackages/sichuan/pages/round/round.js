@@ -65,6 +65,14 @@ function emptyWinDraft() {
     };
 }
 
+function emptyWallDraft() {
+    return {
+        concealedTiles: [],
+        melds: [],
+        result: null
+    };
+}
+
 function emptyWinContext() {
     return {
         tianhu: false,
@@ -93,6 +101,20 @@ function normalizeWinDraft(draft) {
     next.winTile = next.winTile || '';
     next.result = next.result || null;
     return next;
+}
+
+function normalizeWallDraft(draft) {
+    var next = normalizeWinDraft(draft || emptyWallDraft());
+    delete next.winTile;
+    return next;
+}
+
+function physicalTilesInDraft(draft) {
+    var result = (draft.concealedTiles || []).slice();
+    (draft.melds || []).forEach(function (meld) {
+        result = result.concat(meld.tiles || []);
+    });
+    return result;
 }
 
 function errorMessage(reason) {
@@ -146,6 +168,11 @@ Page({
             { value: 'concealedKong', label: '暗杠', copies: 4 }
         ],
         tileOptions: [],
+        showWallForm: false,
+        wallPlayers: [],
+        currentWallPlayerId: '',
+        wallDrafts: {},
+        currentWallDraft: emptyWallDraft(),
         showKongForm: false,
         kongTypeIndex: 0,
         kongTypeOptions: [
@@ -224,6 +251,10 @@ Page({
         var selections = draft.exchangeSelections || emptySelections(match.players);
         var dingqueSuits = draft.dingqueSuits || {};
         var savedWin = draft.winEntry || {};
+        var savedWall = draft.wallEntry || {};
+        var wallPlayers = match.players.filter(function (player) {
+            return round.winnerIds.indexOf(player.id) === -1;
+        });
         var firstIncomplete = 0;
         for (var i = 0; i < match.players.length; i++) {
             if (!selections[match.players[i].id] || selections[match.players[i].id].length < 3) {
@@ -250,7 +281,14 @@ Page({
             currentWinDraft: normalizeWinDraft(
                 (savedWin.drafts || {})[savedWin.currentWinPlayerId]
             ),
-            winContext: clone(savedWin.context || this.data.winContext)
+            winContext: clone(savedWin.context || this.data.winContext),
+            showWallForm: !!savedWall.open,
+            wallPlayers: wallPlayers,
+            currentWallPlayerId: savedWall.currentPlayerId || '',
+            wallDrafts: clone(savedWall.drafts || {}),
+            currentWallDraft: normalizeWallDraft(
+                (savedWall.drafts || {})[savedWall.currentPlayerId]
+            )
         });
     },
 
@@ -666,7 +704,212 @@ Page({
     },
 
     openWallEnd: function () {
-        wx.showToast({ title: '终局手牌录入将在下一批接入', icon: 'none' });
+        var rules = this.data.round.rules;
+        if (!rules.huazhuEnabled && !rules.dajiaoEnabled && !rules.taxRefundEnabled) {
+            try {
+                this.saveRound(roundState.recordWallExhausted(this.data.round, {}));
+                wx.showToast({ title: '本局已结束', icon: 'success' });
+            } catch (error) {
+                wx.showToast({ title: error.message || '无法结束本局', icon: 'none' });
+            }
+            return;
+        }
+        var players = this.data.match.players.filter(function (player) {
+            return this.data.round.winnerIds.indexOf(player.id) === -1;
+        }, this);
+        if (!players.length) {
+            wx.showToast({ title: '没有需要进行终局检查的玩家', icon: 'none' });
+            return;
+        }
+        var drafts = clone(this.data.wallDrafts);
+        players.forEach(function (player) {
+            if (!drafts[player.id]) drafts[player.id] = emptyWallDraft();
+        });
+        var currentId = players.some(function (player) {
+            return player.id === this.data.currentWallPlayerId;
+        }, this) ? this.data.currentWallPlayerId : players[0].id;
+        this.setData({
+            showWallForm: true,
+            wallPlayers: players,
+            currentWallPlayerId: currentId,
+            wallDrafts: drafts,
+            currentWallDraft: normalizeWallDraft(drafts[currentId])
+        });
+        this.persistWallDraft();
+    },
+
+    closeWallEntry: function () {
+        this.setData({ showWallForm: false });
+        this.persistWallDraft();
+    },
+
+    persistWallDraft: function () {
+        this.persistInputDraft('wallEntry', {
+            open: this.data.showWallForm,
+            currentPlayerId: this.data.currentWallPlayerId,
+            drafts: clone(this.data.wallDrafts)
+        });
+    },
+
+    switchWallPlayer: function (event) {
+        var playerId = event.currentTarget.dataset.player;
+        var drafts = clone(this.data.wallDrafts);
+        if (!drafts[playerId]) drafts[playerId] = emptyWallDraft();
+        this.setData({
+            currentWallPlayerId: playerId,
+            wallDrafts: drafts,
+            currentWallDraft: normalizeWallDraft(drafts[playerId])
+        });
+        this.persistWallDraft();
+    },
+
+    updateCurrentWallDraft: function (draft) {
+        var drafts = clone(this.data.wallDrafts);
+        draft.result = null;
+        drafts[this.data.currentWallPlayerId] = clone(draft);
+        this.setData({ wallDrafts: drafts, currentWallDraft: draft });
+        this.persistWallDraft();
+    },
+
+    addWallTile: function (event) {
+        var tile = event.currentTarget.dataset.tile;
+        var draft = normalizeWallDraft(this.data.currentWallDraft);
+        if (tiles.getHandCounts(draft.concealedTiles, draft.melds).structural >= 13) {
+            wx.showToast({ title: '终局牌面结构已经达到13张', icon: 'none' });
+            return;
+        }
+        draft.concealedTiles.push(tile.id);
+        if (!tiles.validateCopies(draft).valid) {
+            draft.concealedTiles.pop();
+            wx.showToast({ title: '同一种牌最多四张', icon: 'none' });
+            return;
+        }
+        this.triggerFeedback();
+        this.updateCurrentWallDraft(draft);
+    },
+
+    removeWallTile: function (event) {
+        var draft = normalizeWallDraft(this.data.currentWallDraft);
+        draft.concealedTiles.splice(Number(event.currentTarget.dataset.index), 1);
+        this.triggerFeedback();
+        this.updateCurrentWallDraft(draft);
+    },
+
+    addWallMeld: function () {
+        var draft = normalizeWallDraft(this.data.currentWallDraft);
+        var type = this.data.meldTypeOptions[this.data.meldTypeIndex];
+        var tile = this.data.tileOptions[this.data.meldTileIndex];
+        if (tiles.getHandCounts(draft.concealedTiles, draft.melds).structural + 3 > 13) {
+            wx.showToast({ title: '面子加入后牌张结构会超过13张', icon: 'none' });
+            return;
+        }
+        var meldTiles = [];
+        for (var i = 0; i < type.copies; i++) meldTiles.push(tile.id);
+        draft.melds.push({
+            type: type.value,
+            tiles: meldTiles,
+            label: type.label + ' · ' + tile.name
+        });
+        if (!tiles.validateCopies(draft).valid) {
+            draft.melds.pop();
+            wx.showToast({ title: '同一种牌最多四张', icon: 'none' });
+            return;
+        }
+        this.triggerFeedback();
+        this.updateCurrentWallDraft(draft);
+    },
+
+    removeWallMeld: function (event) {
+        var draft = normalizeWallDraft(this.data.currentWallDraft);
+        draft.melds.splice(Number(event.currentTarget.dataset.index), 1);
+        this.triggerFeedback();
+        this.updateCurrentWallDraft(draft);
+    },
+
+    visibleWallTilesFor: function (playerId) {
+        var result = [];
+        var drafts = this.data.wallDrafts;
+        Object.keys(drafts).forEach(function (otherId) {
+            if (otherId !== playerId) result = result.concat(physicalTilesInDraft(drafts[otherId]));
+        });
+        return result;
+    },
+
+    analyzeWallPlayer: function (playerId) {
+        var draft = normalizeWallDraft(this.data.wallDrafts[playerId]);
+        var context = {};
+        if (this.data.round.rules.dingqueEnabled) {
+            context.dingqueSuit = this.data.round.dingqueSuits[playerId];
+        }
+        return sichuanEngine.analyzeExhaustivePlayer({
+            concealedTiles: draft.concealedTiles,
+            melds: draft.melds,
+            visibleTiles: this.visibleWallTilesFor(playerId),
+            context: context,
+            rules: this.data.round.rules
+        });
+    },
+
+    analyzeCurrentWallPlayer: function () {
+        var result = this.analyzeWallPlayer(this.data.currentWallPlayerId);
+        var drafts = clone(this.data.wallDrafts);
+        drafts[this.data.currentWallPlayerId].result = result;
+        this.setData({
+            wallDrafts: drafts,
+            currentWallDraft: normalizeWallDraft(drafts[this.data.currentWallPlayerId])
+        });
+        this.persistWallDraft();
+        if (!result.valid) {
+            wx.showToast({ title: '终局手牌必须是合法的13张结构', icon: 'none' });
+        }
+    },
+
+    submitWallEnd: function () {
+        try {
+            var allKnown = [];
+            var self = this;
+            this.data.wallPlayers.forEach(function (player) {
+                allKnown = allKnown.concat(physicalTilesInDraft(
+                    normalizeWallDraft(self.data.wallDrafts[player.id])
+                ));
+            });
+            if (!tiles.validateCopies({ concealedTiles: allKnown }).valid) {
+                throw new Error('四家终局牌面中存在超过四张的同牌');
+            }
+            var huazhuPlayerIds = [];
+            var dajiaoResults = [];
+            var drafts = clone(this.data.wallDrafts);
+            this.data.wallPlayers.forEach(function (player) {
+                var result = self.analyzeWallPlayer(player.id);
+                drafts[player.id].result = result;
+                if (!result.valid) throw new Error(player.name + '的终局手牌不是合法13张结构');
+                if (result.isHuazhu) {
+                    huazhuPlayerIds.push(player.id);
+                } else {
+                    dajiaoResults.push({
+                        playerId: player.id,
+                        isReady: result.isReady,
+                        maxFan: result.isReady ? result.maxFan : null,
+                        waits: result.waits
+                    });
+                }
+            });
+            var round = roundState.recordWallExhausted(this.data.round, {
+                huazhuPlayerIds: huazhuPlayerIds,
+                dajiaoResults: dajiaoResults
+            });
+            round.inputDraft = round.inputDraft || {};
+            delete round.inputDraft.wallEntry;
+            this.setData({
+                showWallForm: false,
+                wallDrafts: drafts,
+                currentWallDraft: emptyWallDraft()
+            });
+            this.saveRound(round);
+            wx.showToast({ title: '终局检查与结算完成', icon: 'success' });
+        } catch (error) {
+            wx.showToast({ title: error.message || '终局手牌信息不完整', icon: 'none' });
+        }
     },
 
     commitEndedRound: function () {

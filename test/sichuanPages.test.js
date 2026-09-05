@@ -7,6 +7,7 @@ var path = require('node:path');
 
 var schema = require('../data/schema.js');
 var matchState = require('../rules/sichuan/matchState.js');
+var roundState = require('../rules/sichuan/roundState.js');
 var matchService = require('../services/matchService.js');
 
 function pageDefinitionFor(relativePath) {
@@ -312,4 +313,143 @@ test('当前局页面支持一炮多响并分别使用每名玩家的算牌结�
     assert.deepEqual(page.data.round.scoreChanges, { p1: 1, p2: -2, p3: 1, p4: 0 });
     assert.equal(page.data.round.events[0].winners.length, 2);
     assert.deepEqual(page.data.winDrafts, {});
+});
+
+function wallDraft(concealedTiles) {
+    return { concealedTiles: concealedTiles, melds: [], result: null };
+}
+
+test('牌墙耗尽页面自动执行花猪大叫退税并可确认计入整场', function () {
+    var match = playableMatch('bloodBattle');
+    match.rulesSnapshot.dingqueEnabled = true;
+    match.rulesSnapshot.menqingZhongzhangEnabled = true;
+    var round = match.currentRound;
+    round.rules.dingqueEnabled = true;
+    round.rules.menqingZhongzhangEnabled = true;
+    round.phase = 'play';
+    round.dingqueSuits = { p1: 'p', p2: 'p', p3: 'p', p4: 'p' };
+    round = roundState.recordKong(round, {
+        actorId: 'p3', sourcePlayerId: 'p4', kongType: 'directKong'
+    });
+    round = roundState.recordWin(round, {
+        winners: [{ playerId: 'p1', fan: 0 }],
+        discarderId: 'p4'
+    });
+    match.currentRound = round;
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+    page.openWallEnd();
+    page.data.wallDrafts = {
+        p2: wallDraft([
+            'm1', 'm2', 'm3', 'm4', 'm5', 'm6',
+            's1', 's2', 's3', 's7', 's8', 's9', 'm9'
+        ]),
+        p3: wallDraft([
+            'm1', 'm2', 'm4', 'm5', 'm7', 'm8',
+            's1', 's3', 's4', 's6', 's8', 'p2', 'p5'
+        ]),
+        p4: wallDraft([
+            'm2', 'm3', 'm5', 'm6', 'm8', 'm9',
+            's1', 's2', 's3', 's4', 's5', 's7', 's9'
+        ])
+    };
+    page.data.currentWallPlayerId = 'p2';
+    page.data.currentWallDraft = page.data.wallDrafts.p2;
+
+    page.analyzeCurrentWallPlayer();
+    assert.equal(page.data.currentWallDraft.result.isReady, true);
+    assert.equal(page.data.currentWallDraft.result.maxFan, 1);
+    page.submitWallEnd();
+
+    assert.equal(page.data.round.ended, true);
+    assert.equal(page.data.round.endReason, 'wallExhausted');
+    assert.deepEqual(page.data.round.transactions.map(function (transaction) {
+        return transaction.type;
+    }), ['kong', 'win', 'huazhu', 'dajiao', 'taxRefund']);
+    assert.deepEqual(page.data.round.scoreChanges, { p1: 17, p2: 18, p3: -48, p4: 13 });
+    var terminalEvent = page.data.round.events[page.data.round.events.length - 1];
+    assert.deepEqual(terminalEvent.huazhuPlayerIds, ['p3']);
+    assert.equal(terminalEvent.dajiaoResults.find(function (item) {
+        return item.playerId === 'p2';
+    }).maxFan, 1);
+
+    page.commitEndedRound();
+    var saved = matchService.findMatch(app.globalData.localData, 'win-match').match;
+    assert.equal(saved.rounds.length, 1);
+    assert.deepEqual(saved.scoreTotals, { p1: 17, p2: 18, p3: -48, p4: 13 });
+});
+
+test('牌墙耗尽页面拒绝四家合计出现第五张同牌', function () {
+    var match = playableMatch('normal');
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+    page.openWallEnd();
+    page.addWallTile({ currentTarget: { dataset: { tile: { id: 'm1' } } } });
+    assert.deepEqual(
+        matchService.findMatch(app.globalData.localData, 'win-match').match.currentRound
+            .inputDraft.wallEntry.drafts.p1.concealedTiles,
+        ['m1']
+    );
+    var base = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 's1', 's2', 's3', 's7', 's8', 's9', 'm9'];
+    page.data.wallDrafts = {
+        p1: wallDraft(base.slice()), p2: wallDraft(base.slice()),
+        p3: wallDraft(base.slice()), p4: wallDraft(base.slice())
+    };
+    page.data.wallDrafts.p1.concealedTiles[12] = 'm1';
+
+    page.submitWallEnd();
+
+    assert.equal(page.data.round.ended, false);
+    assert.equal(calls.some(function (call) {
+        return call[0] === 'toast' && call[1].indexOf('超过四张') !== -1;
+    }), true);
+});
+
+test('关闭全部终局附加规则时牌墙耗尽无需录入手牌', function () {
+    var match = playableMatch('normal');
+    ['huazhuEnabled', 'dajiaoEnabled', 'taxRefundEnabled'].forEach(function (key) {
+        match.rulesSnapshot[key] = false;
+        match.currentRound.rules[key] = false;
+    });
+    var app = {
+        globalData: {
+            localData: matchService.upsertMatch(schema.createDefaultData(), match),
+            settings: { soundEnabled: false, vibrationEnabled: false }
+        }
+    };
+    global.getApp = function () { return app; };
+    var calls = [];
+    global.wx = storageWx(calls);
+    var definition = pageDefinitionFor('../subpackages/sichuan/pages/round/round.js');
+    var page = pageContext(definition);
+    page.onLoad({ id: 'win-match' });
+    page.onShow();
+
+    page.openWallEnd();
+
+    assert.equal(page.data.round.ended, true);
+    assert.deepEqual(page.data.round.transactions, []);
+    assert.equal(page.data.showWallForm, false);
 });

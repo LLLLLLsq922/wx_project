@@ -89,3 +89,6 @@
 .event-switch switch { transform: scale(.72); transform-origin: right center; }
 .end-card { padding-top: 30rpx; text-align: center; }
 .end-mark { display: inline-block; margin-bottom: 12rpx; padding: 7rpx 15rpx; border-radius: 99rpx; background: #e8f7ef; color: #118158; font-size: 20rpx; font-weight: 750; }
+.wall-player-tabs { margin-top: 18rpx; }
+.terminal-rule-note { display: flex; justify-content: space-between; gap: 8rpx; margin-top: 15rpx; color: #6d8179; font-size: 19rpx; }
+.terminal-rule-note text { flex: 1; padding: 9rpx 4rpx; border-radius: 11rpx; background: #f0f4f2; text-align: center; }

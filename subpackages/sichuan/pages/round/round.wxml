@@ -137,6 +137,46 @@ module.exports.contains = contains;
       <button class="primary-button form-submit" bindtap="submitWin">计算并记录本次胡牌</button>
     </view>
 
+    <view class="operation-card wall-form" wx:if="{{showWallForm}}">
+      <view class="form-head"><text class="section-title">牌墙耗尽检查</text><text class="close-link" bindtap="closeWallEntry">关闭</text></view>
+      <text class="section-copy">逐家录入未和牌玩家的13张终局结构，系统会结合定缺自动执行查花猪、查大叫和退税。</text>
+      <view class="player-edit-tabs wall-player-tabs">
+        <view class="edit-player {{currentWallPlayerId === item.id ? 'is-active' : ''}}" wx:for="{{wallPlayers}}" wx:key="id" data-player="{{item.id}}" bindtap="switchWallPlayer">{{item.name}}</view>
+      </view>
+      <view class="hand-editor" wx:if="{{currentWallPlayerId}}">
+        <view class="hand-count">暗手 {{currentWallDraft.concealedTiles.length}} 张 · 副露 {{currentWallDraft.melds.length}} 组 · 目标13张结构</view>
+        <view class="selected-hand">
+          <text class="empty-slot" wx:if="{{!currentWallDraft.concealedTiles.length}}">点击下方牌面加入终局暗手</text>
+          <view class="hand-tile" wx:for="{{currentWallDraft.concealedTiles}}" wx:key="index" data-index="{{index}}" bindtap="removeWallTile"><image src="{{viewUtil.tileImage(item)}}" mode="aspectFit" /></view>
+        </view>
+        <view class="meld-list" wx:if="{{currentWallDraft.melds.length}}">
+          <view class="meld-chip" wx:for="{{currentWallDraft.melds}}" wx:key="index" data-index="{{index}}" bindtap="removeWallMeld">{{item.label}} ×</view>
+        </view>
+        <view class="compact-tile-bank">
+          <view class="tile-row" wx:for="{{tileGroups}}" wx:key="suit" wx:for-item="group">
+            <view class="tile-button" wx:for="{{group.tiles}}" wx:key="id" wx:for-item="tile" data-tile="{{tile}}" bindtap="addWallTile" hover-class="tile-pressed"><image src="{{tile.image}}" mode="aspectFit" /></view>
+          </view>
+        </view>
+        <view class="meld-builder">
+          <picker range="{{meldTypeOptions}}" range-key="label" value="{{meldTypeIndex}}" bindchange="onMeldTypeChange"><view class="builder-picker">{{meldTypeOptions[meldTypeIndex].label}} ›</view></picker>
+          <picker range="{{tileOptions}}" range-key="name" value="{{meldTileIndex}}" bindchange="onMeldTileChange"><view class="builder-picker">{{tileOptions[meldTileIndex].name}} ›</view></picker>
+          <view class="small-action" bindtap="addWallMeld">加入副露</view>
+        </view>
+        <button class="secondary-button" bindtap="analyzeCurrentWallPlayer">检查当前玩家</button>
+        <view class="win-result {{currentWallDraft.result.valid ? 'is-valid' : 'is-invalid'}}" wx:if="{{currentWallDraft.result}}">
+          <text class="result-title">{{!currentWallDraft.result.valid ? '牌张结构不完整' : currentWallDraft.result.isHuazhu ? '花猪' : currentWallDraft.result.isReady ? '已大叫 · 最高' + currentWallDraft.result.maxFan + '番' : '未大叫'}}</text>
+          <text class="result-copy" wx:if="{{currentWallDraft.result.valid && currentWallDraft.result.isReady}}">共 {{currentWallDraft.result.waits.length}} 种有效听牌</text>
+          <text class="result-copy" wx:elif="{{currentWallDraft.result.valid && currentWallDraft.result.isHuazhu}}">终局仍持有定缺花色</text>
+        </view>
+      </view>
+      <view class="terminal-rule-note">
+        <text>查花猪 {{round.rules.huazhuEnabled ? '开启' : '关闭'}}</text>
+        <text>查大叫 {{round.rules.dajiaoEnabled ? '开启' : '关闭'}}</text>
+        <text>退税 {{round.rules.taxRefundEnabled ? '开启' : '关闭'}}</text>
+      </view>
+      <button class="primary-button form-submit" bindtap="submitWallEnd">检查四家并完成本局</button>
+    </view>
+
     <view class="operation-card kong-form" wx:if="{{showKongForm}}">
       <view class="form-head"><text class="section-title">记录杠牌</text><text class="close-link" bindtap="closeKongEntry">关闭</text></view>
       <view class="form-row"><text>杠牌类型</text><picker range="{{kongTypeOptions}}" range-key="label" value="{{kongTypeIndex}}" bindchange="onKongTypeChange"><view class="picker-value">{{kongTypeOptions[kongTypeIndex].label}} ›</view></picker></view>
